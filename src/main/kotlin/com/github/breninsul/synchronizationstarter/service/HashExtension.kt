@@ -42,6 +42,7 @@ fun Any.sha256Hash(): Long {
 
 fun Any.toBytes(): ByteArray {
     return when (this) {
+        is ByteArray->this
         is Char->this.code.toBytes()
         is String -> this.toByteArray()
         is Byte -> ByteBuffer.allocate(1).put(this).array()
