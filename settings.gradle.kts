@@ -1,1 +1,1 @@
-rootProject.name = "synchronization-satrter"
+rootProject.name = "synchronization-starter"
