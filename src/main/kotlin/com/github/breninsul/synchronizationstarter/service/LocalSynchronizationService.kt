@@ -30,6 +30,7 @@ import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.Semaphore
+import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.locks.StampedLock
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -39,7 +40,7 @@ import java.util.logging.Logger
  */
 open class LocalSynchronizationService : ClearableSynchronisationService {
     protected open val logger = Logger.getLogger(this.javaClass.name)
-    protected open val internalLock = Semaphore(1)
+    protected open val internalLock = ReentrantLock()
     protected open val locks: ConcurrentMap<Any, ClientLock> = ConcurrentHashMap()
 
     /**
@@ -57,7 +58,7 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
      * @param id The id of the lock.
      */
     override fun clear(id: Any) {
-        internalLock.acquire()
+        internalLock.lock()
         try {
             val clientLock = locks[id]
             if (clientLock?.lock?.isWriteLocked == false) {
@@ -68,7 +69,7 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
                 }
             }
         } finally {
-            internalLock.release()
+            internalLock.unlock()
         }
     }
 
@@ -112,7 +113,7 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
      * @return The lock associated with the given id.
      */
     protected open fun getLock(id: Any): ClientLock {
-        internalLock.acquire()
+        internalLock.lock()
         try {
             val clientLock = locks[id]
             return if (clientLock == null) {
@@ -123,7 +124,7 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
                 clientLock
             }
         }finally {
-            internalLock.release()
+            internalLock.unlock()
         }
     }
 

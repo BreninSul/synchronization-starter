@@ -69,7 +69,6 @@ class ClearedSynchronizationServiceTest {
         val timePairs = listOf(startedTime!! to endedTime!!, startedTime2!! to endedTime2!!).sortedBy { it.first }
 
         val delay = Duration.between(timePairs[0].first, timePairs[1].first)
-        //check that there we ordered process
         assert(delay<Duration.ofSeconds(1))
         logger.log(Level.INFO,"Delay was ${delay.toMillis()}")
     }
