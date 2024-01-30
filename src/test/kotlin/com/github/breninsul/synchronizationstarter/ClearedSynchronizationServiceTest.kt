@@ -40,7 +40,7 @@ class ClearedSynchronizationServiceTest {
 
     @Test
     fun `test clear`() {
-        val clearedSyncService = LockClearDecorator(Duration.ofMillis(100), Duration.ofMillis(10), syncService)
+        val clearedSyncService = LockClearDecorator(Duration.ofMillis(100), Duration.ofMillis(10),Duration.ofMillis(10), syncService)
         var startedTime: LocalDateTime? = null
         var endedTime: LocalDateTime? = null
         val testSyncId = "Test"
@@ -76,7 +76,7 @@ class ClearedSynchronizationServiceTest {
 
     @Test
     fun `test sync`() {
-        val clearedSyncService = LockClearDecorator(Duration.ofSeconds(100), Duration.ofMillis(10), syncService)
+        val clearedSyncService = LockClearDecorator(Duration.ofSeconds(100), Duration.ofMillis(10),Duration.ofMillis(10), syncService)
         var startedTime: LocalDateTime? = null
         var endedTime: LocalDateTime? = null
         val testSyncId = "Test"
