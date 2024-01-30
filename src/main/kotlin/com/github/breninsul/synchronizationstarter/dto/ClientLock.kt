@@ -37,7 +37,7 @@ import java.util.concurrent.locks.StampedLock
  */
 open class ClientLock(
     val lock: StampedLock = StampedLock(),
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: LocalDateTime = LocalDateTime.now(),
 ) {
     @Volatile
     var stamp: Long? = null

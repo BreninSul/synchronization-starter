@@ -42,8 +42,8 @@ fun Any.sha256Hash(): Long {
 
 fun Any.toBytes(): ByteArray {
     return when (this) {
-        is ByteArray->this
-        is Char->this.code.toBytes()
+        is ByteArray -> this
+        is Char -> this.code.toBytes()
         is String -> this.toByteArray()
         is Byte -> ByteBuffer.allocate(1).put(this).array()
         is Short -> ByteBuffer.allocate(2).putShort(this).array()
@@ -55,8 +55,8 @@ fun Any.toBytes(): ByteArray {
         is UShort -> this.toShort().toBytes()
         is UInt -> this.toInt().toBytes()
         is ULong -> this.toLong().toBytes()
-        is BigInteger ->this.toByteArray()
-        is BigDecimal ->this.unscaledValue().toByteArray()
+        is BigInteger -> this.toByteArray()
+        is BigDecimal -> this.unscaledValue().toByteArray()
         else -> {
             val bos = ByteArrayOutputStream()
             val oos = ObjectOutputStream(bos)

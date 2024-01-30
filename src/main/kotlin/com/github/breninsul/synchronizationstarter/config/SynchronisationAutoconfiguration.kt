@@ -22,8 +22,6 @@
  * SOFTWARE.
  */
 
-
-
 package com.github.breninsul.synchronizationstarter.config
 
 import com.github.breninsul.synchronizationstarter.service.LocalSynchronizationService
@@ -38,21 +36,20 @@ import org.springframework.context.annotation.Bean
 import org.springframework.scheduling.annotation.Scheduled
 
 @ConditionalOnClass(Scheduled::class)
-@ConditionalOnProperty(prefix = "synchronisation",name = ["disabled"], matchIfMissing = true, havingValue = "false")
+@ConditionalOnProperty(prefix = "synchronisation", name = ["disabled"], matchIfMissing = true, havingValue = "false")
 @AutoConfiguration
 @EnableConfigurationProperties(SynchronisationProperties::class)
 class SynchronisationAutoconfiguration {
     @Bean
     @ConditionalOnMissingBean(SynchronizationService::class)
-    @ConditionalOnProperty(prefix = "synchronisation",name = ["mode"], matchIfMissing = true, havingValue = "LOCAL")
+    @ConditionalOnProperty(prefix = "synchronisation", name = ["mode"], matchIfMissing = true, havingValue = "LOCAL")
     fun getLocalSynchronizationService(synchronisationProperties: SynchronisationProperties): SynchronizationService {
-        val local=LocalSynchronizationService()
-        if (synchronisationProperties.lockTimeout.toMillis()<1){
+        val local = LocalSynchronizationService()
+        if (synchronisationProperties.lockTimeout.toMillis() < 1) {
             return local
-        } else{
-            val cleared=LockClearDecorator(synchronisationProperties.lockTimeout,synchronisationProperties.clearDelay,local)
+        } else {
+            val cleared = LockClearDecorator(synchronisationProperties.lockTimeout, synchronisationProperties.lockLifetime,synchronisationProperties.clearDelay, local)
             return cleared
         }
     }
-
 }

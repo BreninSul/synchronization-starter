@@ -22,20 +22,22 @@
  * SOFTWARE.
  */
 
-
 package com.github.breninsul.synchronizationstarter.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
 
 @ConfigurationProperties("synchronisation")
-data class SynchronisationProperties (
+data class SynchronisationProperties(
     var disabled: Boolean = false,
     var lockTimeout: Duration = Duration.ofMinutes(10),
+    var lockLifetime: Duration = Duration.ofMinutes(30),
     var clearDelay: Duration = Duration.ofMinutes(1),
-    var mode:MODE = MODE.LOCAL
-){
-    enum class MODE{
-        LOCAL,POSTGRESQL,ZOOKEEPER
+    var mode: MODE = MODE.LOCAL,
+) {
+    enum class MODE {
+        LOCAL,
+        POSTGRESQL,
+        ZOOKEEPER,
     }
 }

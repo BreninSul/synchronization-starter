@@ -27,7 +27,6 @@ package com.github.breninsul.synchronizationstarter
 import com.github.breninsul.synchronizationstarter.service.LocalSynchronizationService
 import com.github.breninsul.synchronizationstarter.service.LockClearDecorator
 import com.github.breninsul.synchronizationstarter.service.sync
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.LocalDateTime
@@ -41,70 +40,73 @@ class ClearedSynchronizationServiceTest {
 
     @Test
     fun `test clear`() {
-        val clearedSyncService=LockClearDecorator(Duration.ofMillis(100),Duration.ofMillis(10),syncService)
+        val clearedSyncService = LockClearDecorator(Duration.ofMillis(100), Duration.ofMillis(10), syncService)
         var startedTime: LocalDateTime? = null
         var endedTime: LocalDateTime? = null
         val testSyncId = "Test"
-        //Call two threads with the same task
-        val jobThread = thread(start = true) {
-            clearedSyncService.sync(testSyncId) {
-                startedTime = LocalDateTime.now()
-                Thread.sleep(Duration.ofSeconds(1))
-                endedTime = LocalDateTime.now()
+        // Call two threads with the same task
+        val jobThread =
+            thread(start = true) {
+                clearedSyncService.sync(testSyncId) {
+                    startedTime = LocalDateTime.now()
+                    Thread.sleep(Duration.ofSeconds(1))
+                    endedTime = LocalDateTime.now()
+                }
             }
-        }
         var startedTime2: LocalDateTime? = null
         var endedTime2: LocalDateTime? = null
-        val jobThread2 = thread(start = true) {
-            clearedSyncService.sync(testSyncId) {
-                startedTime2 = LocalDateTime.now()
-                Thread.sleep(Duration.ofSeconds(1))
-                endedTime2 = LocalDateTime.now()
+        val jobThread2 =
+            thread(start = true) {
+                clearedSyncService.sync(testSyncId) {
+                    startedTime2 = LocalDateTime.now()
+                    Thread.sleep(Duration.ofSeconds(1))
+                    endedTime2 = LocalDateTime.now()
+                }
             }
-        }
-        //wait till end
+        // wait till end
         jobThread.join()
         jobThread2.join()
-        //we can't be sure about threads order, sort start and end time
+        // we can't be sure about threads order, sort start and end time
         val timePairs = listOf(startedTime!! to endedTime!!, startedTime2!! to endedTime2!!).sortedBy { it.first }
 
         val delay = Duration.between(timePairs[0].first, timePairs[1].first)
-        assert(delay<Duration.ofSeconds(1))
-        logger.log(Level.INFO,"Delay was ${delay.toMillis()}")
+        assert(delay < Duration.ofSeconds(1))
+        logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
     }
-
 
     @Test
     fun `test sync`() {
-        val clearedSyncService=LockClearDecorator(Duration.ofSeconds(100),Duration.ofMillis(10),syncService)
+        val clearedSyncService = LockClearDecorator(Duration.ofSeconds(100), Duration.ofMillis(10), syncService)
         var startedTime: LocalDateTime? = null
         var endedTime: LocalDateTime? = null
         val testSyncId = "Test"
-        //Call two threads with the same task
-        val jobThread = thread(start = true) {
-            clearedSyncService.sync(testSyncId) {
-                startedTime = LocalDateTime.now()
-                Thread.sleep(Duration.ofSeconds(1))
-                endedTime = LocalDateTime.now()
+        // Call two threads with the same task
+        val jobThread =
+            thread(start = true) {
+                clearedSyncService.sync(testSyncId) {
+                    startedTime = LocalDateTime.now()
+                    Thread.sleep(Duration.ofSeconds(1))
+                    endedTime = LocalDateTime.now()
+                }
             }
-        }
         var startedTime2: LocalDateTime? = null
         var endedTime2: LocalDateTime? = null
-        val jobThread2 = thread(start = true) {
-            clearedSyncService.sync(testSyncId) {
-                startedTime2 = LocalDateTime.now()
-                Thread.sleep(Duration.ofSeconds(1))
-                endedTime2 = LocalDateTime.now()
+        val jobThread2 =
+            thread(start = true) {
+                clearedSyncService.sync(testSyncId) {
+                    startedTime2 = LocalDateTime.now()
+                    Thread.sleep(Duration.ofSeconds(1))
+                    endedTime2 = LocalDateTime.now()
+                }
             }
-        }
-        //wait till end
+        // wait till end
         jobThread.join()
         jobThread2.join()
-        //we can't be sure about threads order, sort start and end time
+        // we can't be sure about threads order, sort start and end time
         val timePairs = listOf(startedTime!! to endedTime!!, startedTime2!! to endedTime2!!).sortedBy { it.first }
-        //check that there we ordered process
+        // check that there we ordered process
         assert(timePairs[1].first > timePairs[0].second)
         val delay = Duration.between(timePairs[0].second, timePairs[1].first)
-        logger.log(Level.INFO,"Delay was ${delay.toMillis()}")
+        logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
     }
 }

@@ -31,62 +31,60 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicLong
 import java.util.logging.Level
 import java.util.logging.Logger
-import kotlin.reflect.KProperty
 
 /**
  * This class is a decorator for ClearableSynchronisationService.
  *
  * @property lockLifetime Duration for how long lock will be alive.
+ * @property lockTimeout Duration for how long lock can be locked before forced unlock by timeout.
  * @property clearDelay   Duration after which system will attempt to clear the lock handled by the ClearableSynchronisationService.
  * @property delegate     ClearableSynchronisationService to be decorated by adding synchronization features
  * @constructor Initializes a new LockClearDecorator instance with prescribed values.
  */
 open class LockClearDecorator(
     protected val lockLifetime: Duration,
+    protected val lockTimeout: Duration,
     protected val clearDelay: Duration,
     protected val delegate: ClearableSynchronisationService,
 ) : SynchronizationService by delegate {
     protected open val logger = Logger.getLogger(this.javaClass.name)
-    protected open val batchTimer: Timer by lazy {   createTimer()}
-    init {
-        batchTimer
-    }
-
-    val counter = AtomicLong(1)
+    protected open val batchTimer: Timer = createTimer()
+    protected open val counter = AtomicLong(1)
 
     /**
-    * The function to initialize a timer which clears the locks after specified clearDelay
-    * @return Timer which performs the cleanup operation
-    */
-   protected  fun createTimer(): Timer {
-        val task = object : TimerTask() {
-            override fun run() {
-                val time = System.currentTimeMillis()
-                 try {
-                    val toClear=delegate.getAllLocks(lifetime = lockLifetime)
-                    toClear
-                        .filter { it.second.lock.isWriteLocked }
-                        .forEach { l ->
-                            delegate.unlockTimeOuted(l.first,lockLifetime)
-                            logger.log(Level.SEVERE, "Lock has been blocked before clear :${l.first}. Took ${System.currentTimeMillis()-l.second.createdAt.toEpochSecond(ZoneOffset.of(ZoneId.systemDefault().id))}")
+     * The function to initialize a timer which clears the locks after specified clearDelay
+     * @return Timer which performs the cleanup operation
+     */
+    protected fun createTimer(): Timer {
+        val task =
+            object : TimerTask() {
+                override fun run() {
+                    val time = System.currentTimeMillis()
+                    try {
+                        val toUnlock = delegate.getAllLocks(lifetime = lockTimeout)
+                        toUnlock
+                            .filter { it.second.lock.isWriteLocked }
+                            .forEach { l ->
+                                delegate.unlockTimeOuted(l.first, lockLifetime)
+                                logger.log(Level.SEVERE, "Lock has been blocked before clear :${l.first}. Took ${System.currentTimeMillis() - l.second.createdAt.toEpochSecond(ZoneOffset.of(ZoneId.systemDefault().id))}")
+                            }
+                        val toClear = delegate.getAllLocks(lifetime = lockLifetime)
+                        val removed =
+                            toClear.map {
+                                delegate.clear(it.first)
+                                it.first
+                            }.joinToString(";")
+                        if (removed.isNotBlank()) {
+                            logger.log(Level.FINEST, "Lock for $removed removed ")
                         }
-                    val removed = toClear.map {
-                        delegate.clear(it.first)
-                        it.first
-                    }.joinToString(";")
-                    if (removed.isNotBlank()) {
-                        logger.log(Level.FINEST, "Lock for $removed removed ")
+                    } catch (t: Throwable) {
+                        "Error clear locks ${t.javaClass}:${t.message}"
                     }
-                } catch (t: Throwable) {
-                    "Error clear locks ${t.javaClass}:${t.message}"
+                    logger.log(Level.FINEST, "Clear sync for ${delegate::class.simpleName} job №${counter.getAndIncrement()} took ${System.currentTimeMillis() - time}ms.")
                 }
-                logger.log(Level.FINEST, "Clear sync for ${delegate::class.simpleName} job №${counter.getAndIncrement()} took ${System.currentTimeMillis() - time}ms.")
             }
-        }
         val timer = Timer("Clear-${delegate::class.simpleName}")
         timer.scheduleAtFixedRate(task, clearDelay.toMillis(), clearDelay.toMillis())
         return timer
     }
-
 }
-

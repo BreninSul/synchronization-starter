@@ -27,7 +27,6 @@ package com.github.breninsul.synchronizationstarter
 import com.github.breninsul.synchronizationstarter.service.sha256Hash
 import com.github.breninsul.synchronizationstarter.service.toBytes
 import org.junit.jupiter.api.Test
-import org.springframework.util.Assert
 import java.util.logging.Logger
 
 class HashTest {
@@ -35,26 +34,28 @@ class HashTest {
 
     @Test
     fun `test hash map`() {
-        val firstValue = mapOf("one" to "second","two" to "third".repeat(100))
-        val secondValue = mapOf("one" to "second","two" to "third".repeat(100))
-        val firstHash=firstValue.sha256Hash()
-        val secondHash=secondValue.sha256Hash()
-        assert(firstHash==secondHash)
+        val firstValue = mapOf("one" to "second", "two" to "third".repeat(100))
+        val secondValue = mapOf("one" to "second", "two" to "third".repeat(100))
+        val firstHash = firstValue.sha256Hash()
+        val secondHash = secondValue.sha256Hash()
+        assert(firstHash == secondHash)
     }
+
     @Test
     fun `test hash string`() {
         val firstValue = "one"
         val secondValue = "one"
-        val firstHash=firstValue.sha256Hash()
-        val secondHash=secondValue.sha256Hash()
-        assert(firstHash==secondHash)
+        val firstHash = firstValue.sha256Hash()
+        val secondHash = secondValue.sha256Hash()
+        assert(firstHash == secondHash)
     }
+
     @Test
     fun `test bytes`() {
-        val firstValue = mapOf("one" to "second","two" to "third")
-        val secondValue = mapOf("one" to "second","two" to "third")
-        val firstHash=firstValue.toBytes()
-        val secondHash=secondValue.toBytes()
+        val firstValue = mapOf("one" to "second", "two" to "third")
+        val secondValue = mapOf("one" to "second", "two" to "third")
+        val firstHash = firstValue.toBytes()
+        val secondHash = secondValue.toBytes()
         assert(firstHash.contentEquals(secondHash))
     }
 }

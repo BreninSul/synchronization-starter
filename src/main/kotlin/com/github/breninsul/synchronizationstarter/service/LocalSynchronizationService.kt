@@ -29,7 +29,6 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
-import java.util.concurrent.Semaphore
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.locks.StampedLock
 import java.util.logging.Level
@@ -65,7 +64,7 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
                 locks.remove(id)
                 if (clientLock?.lock?.isWriteLocked == true) {
                     locks[id] = clientLock
-                    logger.log(Level.SEVERE, "Lock for ${id} was cleared but became locked after deletion!")
+                    logger.log(Level.SEVERE, "Lock for $id was cleared but became locked after deletion!")
                 }
             }
         } finally {
@@ -78,7 +77,10 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
      * @param id The id of the lock.
      * @param lifetime The duration since the lock's creation.
      */
-    override fun unlockTimeOuted(id: Any, lifetime: Duration) {
+    override fun unlockTimeOuted(
+        id: Any,
+        lifetime: Duration,
+    ) {
         val clientLock = locks[id]
         if (clientLock?.createdAt?.isBefore(LocalDateTime.now().minus(lifetime)) == true) {
             unlock(clientLock)
@@ -93,7 +95,7 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
      * @return A boolean indicating was locked with other process.
      */
     override fun before(id: Any): Boolean {
-        logger.log(Level.FINEST, "Lock for ${id} set")
+        logger.log(Level.FINEST, "Lock for $id set")
         val time = System.currentTimeMillis()
         val lock = getLock(id)
         val locked: Boolean = lock.lock.isWriteLocked
@@ -123,7 +125,7 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
             } else {
                 clientLock
             }
-        }finally {
+        } finally {
             internalLock.unlock()
         }
     }
@@ -154,5 +156,4 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
             logger.log(Level.WARNING, "Error unlocking lock ! ${t.javaClass}:${t.message}", t)
         }
     }
-
 }

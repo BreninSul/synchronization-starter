@@ -31,7 +31,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.4"
     id("org.jetbrains.kotlin.jvm") version "1.9.22"
     id("org.jetbrains.kotlin.plugin.spring") version "1.9.22"
-    id("org.jetbrains.kotlin.kapt") version "1.9.22" apply(true)
+    id("org.jetbrains.kotlin.kapt") version "1.9.22" apply (true)
 }
 
 group = "com.github.breninsul"
@@ -47,10 +47,10 @@ java {
 repositories {
     mavenCentral()
 }
-tasks.compileJava{
+tasks.compileJava {
     dependsOn.add(tasks.processResources)
 }
-tasks.compileKotlin{
+tasks.compileKotlin {
     dependsOn.add(tasks.processResources)
 }
 
@@ -82,7 +82,6 @@ publishing {
             val softwareComponent = components.first()
             from(softwareComponent)
         }
-
     }
     repositories {
         maven {
