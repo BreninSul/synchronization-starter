@@ -24,21 +24,31 @@
 
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+
+object Constraints {
+    const val SPRING_BOOT_VERSION = "3.2.2"
+    const val KOTLIN_VERSION = "1.9.22"
+    val githubPackagesUsername = System.getenv()["GIHUB_PACKAGE_USERNAME"]
+    val githubPackagesToken = System.getenv()["GIHUB_PACKAGE_TOKEN"]
+    val javaVersion = JavaVersion.VERSION_17
+}
 plugins {
+    val kotlinVersion = "1.9.22"
+    val springBootVersion = "3.2.2"
     id("java-library")
     id("maven-publish")
-    id("org.springframework.boot") version "3.2.2"
+    id("org.springframework.boot") version springBootVersion
     id("io.spring.dependency-management") version "1.1.4"
-    id("org.jetbrains.kotlin.jvm") version "1.9.22"
-    id("org.jetbrains.kotlin.plugin.spring") version "1.9.22"
-    id("org.jetbrains.kotlin.kapt") version "1.9.22" apply (true)
+    id("org.jetbrains.kotlin.jvm") version kotlinVersion
+    id("org.jetbrains.kotlin.plugin.spring") version kotlinVersion
+    id("org.jetbrains.kotlin.kapt") version kotlinVersion
 }
 
 group = "com.github.breninsul"
 version = "1.0.0"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = Constraints.javaVersion
 }
 java {
     withJavadocJar()
@@ -55,17 +65,21 @@ tasks.compileKotlin {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter")
+    implementation("org.springframework.boot:spring-boot-starter:${Constraints.SPRING_BOOT_VERSION}")
     api("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.springframework.boot:spring-boot-starter-jdbc:${Constraints.SPRING_BOOT_VERSION}")
+    implementation("org.postgresql:postgresql:42.7.1")
     kapt("org.springframework.boot:spring-boot-autoconfigure-processor")
     kapt("org.springframework.boot:spring-boot-configuration-processor")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:postgresql")
 }
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
-        jvmTarget = "17"
+        jvmTarget = Constraints.javaVersion.majorVersion
     }
 }
 
@@ -88,8 +102,8 @@ publishing {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/BreninSul/synchronization-starter")
             credentials {
-                username = "${System.getenv()["GIHUB_PACKAGE_USERNAME"]}"
-                password = "${System.getenv()["GIHUB_PACKAGE_TOKEN"]}"
+                username = Constraints.githubPackagesUsername
+                password = Constraints.githubPackagesToken
             }
         }
     }

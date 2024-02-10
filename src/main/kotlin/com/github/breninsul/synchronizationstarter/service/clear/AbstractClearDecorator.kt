@@ -22,8 +22,10 @@
  * SOFTWARE.
  */
 
-package com.github.breninsul.synchronizationstarter.service
+package com.github.breninsul.synchronizationstarter.service.clear
 
+import com.github.breninsul.synchronizationstarter.dto.ClientLock
+import com.github.breninsul.synchronizationstarter.service.SynchronizationService
 import java.time.Duration
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -41,15 +43,23 @@ import java.util.logging.Logger
  * @property delegate     ClearableSynchronisationService to be decorated by adding synchronization features
  * @constructor Initializes a new LockClearDecorator instance with prescribed values.
  */
-open class LockClearDecorator(
+abstract class AbstractClearDecorator<T : ClientLock>(
     protected val lockLifetime: Duration,
     protected val lockTimeout: Duration,
     protected val clearDelay: Duration,
-    protected val delegate: ClearableSynchronisationService,
+    protected val delegate: ClearableSynchronisationService<T>,
 ) : SynchronizationService by delegate {
     protected open val logger = Logger.getLogger(this.javaClass.name)
     protected open val batchTimer: Timer = createTimer()
     protected open val counter = AtomicLong(1)
+
+    /**
+     * Method to filter current lock state.
+     *
+     * @param t pair object, containing the lock
+     * @return returns true if lock is in write locked state, otherwise false
+     */
+    protected abstract fun filterLocked(t: Pair<Any, T>): Boolean
 
     /**
      * The function to initialize a timer which clears the locks after specified clearDelay
@@ -61,14 +71,14 @@ open class LockClearDecorator(
                 override fun run() {
                     val time = System.currentTimeMillis()
                     try {
-                        val toUnlock = delegate.getAllLocks(lifetime = lockTimeout)
+                        val toUnlock = delegate.getAllLocksAfter(lifetime = lockTimeout)
                         toUnlock
-                            .filter { it.second.lock.isWriteLocked }
+                            .filter { filterLocked(it) }
                             .forEach { l ->
                                 delegate.unlockTimeOuted(l.first, lockLifetime)
                                 logger.log(Level.SEVERE, "Lock has been blocked before clear :${l.first}. Took ${System.currentTimeMillis() - l.second.createdAt.toEpochSecond(ZoneOffset.of(ZoneId.systemDefault().id))}")
                             }
-                        val toClear = delegate.getAllLocks(lifetime = lockLifetime)
+                        val toClear = delegate.getAllLocksAfter(lifetime = lockLifetime)
                         val removed =
                             toClear.map {
                                 delegate.clear(it.first)

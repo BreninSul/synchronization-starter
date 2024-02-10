@@ -22,29 +22,20 @@
  * SOFTWARE.
  */
 
-package com.github.breninsul.synchronizationstarter.service
+package com.github.breninsul.synchronizationstarter.service.db
 
-import java.util.concurrent.Callable
+import com.github.breninsul.synchronizationstarter.dto.DBClientLock
+import com.github.breninsul.synchronizationstarter.service.clear.AbstractClearDecorator
+import com.github.breninsul.synchronizationstarter.service.clear.ClearableSynchronisationService
+import java.time.Duration
 
-/**
- * Executes a provided task in synchronization with a specified id.
- *
- * @param T A type parameter that extends SynchronizationService
- * @param R The result type of the provided task
- * @param id An identifier used for synchronization
- * @param task A piece of code that is meant to be executed with synchronization
- * @return Returns the result of the task execution
- *
- * @throws Exception if any thrown by the task
- */
-fun <T : SynchronizationService, R> T.sync(
-    id: Any,
-    task: Callable<R>,
-): R {
-    before(id)
-    try {
-        return task.call()
-    } finally {
-        after(id)
+open class PostgresSQLClearDecorator(
+    lockLifetime: Duration,
+    lockTimeout: Duration,
+    clearDelay: Duration,
+    delegate: ClearableSynchronisationService<DBClientLock>,
+) : AbstractClearDecorator<DBClientLock>(lockLifetime, lockTimeout, clearDelay, delegate) {
+    override fun filterLocked(t: Pair<Any, DBClientLock>): Boolean {
+        return !t.second.statement.connection.isClosed
     }
 }

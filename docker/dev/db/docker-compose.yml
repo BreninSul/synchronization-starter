@@ -1,0 +1,41 @@
+#Example of config
+#  docker network create external-network
+version: "3.9"
+networks:
+  external-network:
+    external: true
+services:
+  sync-dev-postgres:
+    image: postgres:16.1-alpine3.19
+    container_name: sync-dev-postgres
+    hostname: sync-dev-postgres
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=100"
+      - "-c"
+      - "max_replication_slots=0"
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+      - "-c"
+      - "pg_stat_statements.max=1000"
+      - "-c"
+      - "random_page_cost=1.0"
+      - "-c"
+      - "pg_stat_statements.track=all"
+    environment:
+      POSTGRES_DB: "dev"
+      POSTGRES_USER: "dev"
+      POSTGRES_PASSWORD: "dev"
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    mem_swappiness: 0
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+    networks:
+      - external-network

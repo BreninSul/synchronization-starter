@@ -31,16 +31,36 @@ import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 
-fun Any.sha256Hash(): Long {
-    val bytes = MessageDigest.getInstance("SHA-256").digest(this.toBytes())
+/**
+ *  Constant representing the algorithm to be used for hash generation
+ */
+const val ALGORITHM = "SHA-1"
+
+/**
+ * This extension function generates a unique long value hash for any object using SHA-1.
+ *
+ * @receiver The object for which the hash is to be generated.
+ * @return A unique long value representing the hash of the object.
+ */
+fun Any.longHash(): Long {
+    val bytes = MessageDigest.getInstance(ALGORITHM).digest(this.toBytes()) // generating the hash
     var result = 0L
+
+    // shifting and adding bytes to form a long
     for (i in 0 until Long.SIZE_BYTES) {
         result = (result shl 8) or (bytes[i].toLong() and 0xffL)
     }
     return result
 }
 
-fun Any.toBytes(): ByteArray {
+/**
+ * This extension function converts any object into an array of bytes.
+ * It uses different methods of conversion depending on the type of the receiver object.
+ *
+ * @receiver The object that needs to be converted to a byte array.
+ * @return Byte array representation of the object.
+ */
+private fun Any.toBytes(): ByteArray {
     return when (this) {
         is ByteArray -> this
         is Char -> this.code.toBytes()

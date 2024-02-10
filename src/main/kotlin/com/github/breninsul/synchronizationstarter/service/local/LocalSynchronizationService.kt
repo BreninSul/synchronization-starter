@@ -22,9 +22,10 @@
  * SOFTWARE.
  */
 
-package com.github.breninsul.synchronizationstarter.service
+package com.github.breninsul.synchronizationstarter.service.local
 
-import com.github.breninsul.synchronizationstarter.dto.ClientLock
+import com.github.breninsul.synchronizationstarter.dto.LocalClientLock
+import com.github.breninsul.synchronizationstarter.service.clear.ClearableSynchronisationService
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
@@ -34,35 +35,23 @@ import java.util.concurrent.locks.StampedLock
 import java.util.logging.Level
 import java.util.logging.Logger
 
-/**
- * Provides a service for local synchronization.
- */
-open class LocalSynchronizationService : ClearableSynchronisationService {
-    protected open val logger = Logger.getLogger(this.javaClass.name)
+open class LocalSynchronizationService(protected val normalLockTime: Duration) : ClearableSynchronisationService<LocalClientLock> {
+    protected open val logger: Logger = Logger.getLogger(this.javaClass.name)
     protected open val internalLock = ReentrantLock()
-    protected open val locks: ConcurrentMap<Any, ClientLock> = ConcurrentHashMap()
+    protected open val locks: ConcurrentMap<Any, LocalClientLock> = ConcurrentHashMap()
 
-    /**
-     * Gets all the locks that have been created within a certain lifetime.
-     * @param lifetime The duration since the lock's creation.
-     * @return A list of all locks within the given lifetime.
-     */
-    override fun getAllLocks(lifetime: Duration): List<Pair<Any, ClientLock>> {
+    override fun getAllLocksAfter(lifetime: Duration): List<Pair<Any, LocalClientLock>> {
         val clearBefore = LocalDateTime.now().minus(lifetime)
         return locks.filter { it.value.createdAt.isBefore(clearBefore) }.map { it.key to it.value }
     }
 
-    /**
-     * Clears a lock by given id.
-     * @param id The id of the lock.
-     */
     override fun clear(id: Any) {
         internalLock.lock()
         try {
             val clientLock = locks[id]
             if (clientLock?.lock?.isWriteLocked == false) {
                 locks.remove(id)
-                if (clientLock?.lock?.isWriteLocked == true) {
+                if (clientLock.lock.isWriteLocked) {
                     locks[id] = clientLock
                     logger.log(Level.SEVERE, "Lock for $id was cleared but became locked after deletion!")
                 }
@@ -72,11 +61,6 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
         }
     }
 
-    /**
-     * Unlocks a lock that has timed out.
-     * @param id The id of the lock.
-     * @param lifetime The duration since the lock's creation.
-     */
     override fun unlockTimeOuted(
         id: Any,
         lifetime: Duration,
@@ -89,11 +73,6 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
         }
     }
 
-    /**
-     * Call to sync by id.
-     * @param id The id of the lock.
-     * @return A boolean indicating was locked with other process.
-     */
     override fun before(id: Any): Boolean {
         logger.log(Level.FINEST, "Lock for $id set")
         val time = System.currentTimeMillis()
@@ -103,8 +82,8 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
         lock.stamp = (stamp)
         val tookMs = System.currentTimeMillis() - time
         logger.log(Level.FINEST, "Lock $id is locked : $locked .Lock Took $tookMs ms")
-        if (tookMs > 100) {
-            logger.log(Level.SEVERE, "Lock took more then 100ms $tookMs $id")
+        if (tookMs > normalLockTime.toMillis()) {
+            logger.log(Level.SEVERE, "Lock took more then ${normalLockTime.toMillis()}ms $tookMs $id")
         }
         return locked
     }
@@ -114,12 +93,12 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
      * @param id The id of the lock.
      * @return The lock associated with the given id.
      */
-    protected open fun getLock(id: Any): ClientLock {
+    protected open fun getLock(id: Any,): LocalClientLock {
         internalLock.lock()
         try {
             val clientLock = locks[id]
             return if (clientLock == null) {
-                val lock = ClientLock()
+                val lock = LocalClientLock()
                 locks[id] = lock
                 lock
             } else {
@@ -148,12 +127,16 @@ open class LocalSynchronizationService : ClearableSynchronisationService {
      * Unlocks a client lock.
      * @param l The client lock to unlock.
      */
-    protected open fun unlock(l: ClientLock) {
+    protected open fun unlock(l: LocalClientLock) {
+        internalLock.lock()
         try {
             val lock: StampedLock = l.lock
             lock.unlockWrite(l.stamp!!)
+            l.createdAt= LocalDateTime.now()
         } catch (t: Throwable) {
             logger.log(Level.WARNING, "Error unlocking lock ! ${t.javaClass}:${t.message}", t)
+        } finally {
+            internalLock.unlock()
         }
     }
 }

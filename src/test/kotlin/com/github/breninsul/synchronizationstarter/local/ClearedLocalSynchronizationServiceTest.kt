@@ -22,9 +22,10 @@
  * SOFTWARE.
  */
 
-package com.github.breninsul.synchronizationstarter
+package com.github.breninsul.synchronizationstarter.local
 
-import com.github.breninsul.synchronizationstarter.service.LocalSynchronizationService
+import com.github.breninsul.synchronizationstarter.service.local.LocalClearDecorator
+import com.github.breninsul.synchronizationstarter.service.local.LocalSynchronizationService
 import com.github.breninsul.synchronizationstarter.service.sync
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -33,19 +34,20 @@ import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.concurrent.thread
 
-class LocalSynchronizationServiceTest {
-    protected val syncService = LocalSynchronizationService()
+class ClearedLocalSynchronizationServiceTest {
+    protected val syncService = LocalSynchronizationService(Duration.ofMillis(100))
     protected val logger = Logger.getLogger(this.javaClass.name)
 
     @Test
-    fun `test sync`() {
+    fun `test clear`() {
+        val clearedSyncService = LocalClearDecorator(Duration.ofMillis(100), Duration.ofMillis(10), Duration.ofMillis(10), syncService)
         var startedTime: LocalDateTime? = null
         var endedTime: LocalDateTime? = null
         val testSyncId = "Test"
         // Call two threads with the same task
         val jobThread =
             thread(start = true) {
-                syncService.sync(testSyncId) {
+                clearedSyncService.sync(testSyncId) {
                     startedTime = LocalDateTime.now()
                     Thread.sleep(Duration.ofSeconds(1))
                     endedTime = LocalDateTime.now()
@@ -55,7 +57,43 @@ class LocalSynchronizationServiceTest {
         var endedTime2: LocalDateTime? = null
         val jobThread2 =
             thread(start = true) {
-                syncService.sync(testSyncId) {
+                clearedSyncService.sync(testSyncId) {
+                    startedTime2 = LocalDateTime.now()
+                    Thread.sleep(Duration.ofSeconds(1))
+                    endedTime2 = LocalDateTime.now()
+                }
+            }
+        // wait till end
+        jobThread.join()
+        jobThread2.join()
+        // we can't be sure about threads order, sort start and end time
+        val timePairs = listOf(startedTime!! to endedTime!!, startedTime2!! to endedTime2!!).sortedBy { it.first }
+
+        val delay = Duration.between(timePairs[0].first, timePairs[1].first)
+        assert(delay < Duration.ofSeconds(1))
+        logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
+    }
+
+    @Test
+    fun `test sync`() {
+        val clearedSyncService = LocalClearDecorator(Duration.ofSeconds(100), Duration.ofMillis(10), Duration.ofMillis(10), syncService)
+        var startedTime: LocalDateTime? = null
+        var endedTime: LocalDateTime? = null
+        val testSyncId = "Test"
+        // Call two threads with the same task
+        val jobThread =
+            thread(start = true) {
+                clearedSyncService.sync(testSyncId) {
+                    startedTime = LocalDateTime.now()
+                    Thread.sleep(Duration.ofSeconds(1))
+                    endedTime = LocalDateTime.now()
+                }
+            }
+        var startedTime2: LocalDateTime? = null
+        var endedTime2: LocalDateTime? = null
+        val jobThread2 =
+            thread(start = true) {
+                clearedSyncService.sync(testSyncId) {
                     startedTime2 = LocalDateTime.now()
                     Thread.sleep(Duration.ofSeconds(1))
                     endedTime2 = LocalDateTime.now()

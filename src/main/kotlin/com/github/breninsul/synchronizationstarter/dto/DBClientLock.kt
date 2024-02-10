@@ -24,47 +24,48 @@
 
 package com.github.breninsul.synchronizationstarter.dto
 
+import java.sql.Statement
 import java.time.LocalDateTime
 
 /**
- * This class represents a client lock.
+ * A class representing a database client lock.
+ * Extends the ClientLock class.
  *
- * @property createdAt is the time when the client lock was created. Default value is the current time.
+ * @property statement The statement for the database client lock.
+ * @constructor Creates a database client lock with the specified statement and creation time.
  *
- * @constructor Initialize the client lock with the time of creation.
+ * @param statement The statement for the database client lock.
+ * @param createdAt The creation time for the client lock. Defaults to the current time if no argument is provided.
  *
- **/
-open class ClientLock(@Volatile var createdAt: LocalDateTime = LocalDateTime.now()) {
+ */
+class DBClientLock(
+    val statement: Statement,
+    createdAt: LocalDateTime = LocalDateTime.now(),
+) : ClientLock(createdAt) {
     /**
-     * Check if this client lock is equal to another object.
+     * Checks if this object is equal to another.
      *
-     * @param other is the object to be compared with this client lock.
-     * @return a boolean. Returns true if the two are equal. Otherwise, it returns false.
-     **/
+     * @param other The object to check for equality.
+     * @return True if the objects are equal, false otherwise.
+     */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
+        if (!super.equals(other)) return false
 
-        other as ClientLock
+        other as DBClientLock
 
-        return createdAt == other.createdAt
+        return statement == other.statement
     }
 
     /**
-     * Get the hashcode of this client lock.
+     * Generates a hash code for the object.
      *
-     * @return an int value which is the hashcode of this client lock.
-     **/
+     * @return The generated hash code.
+     */
     override fun hashCode(): Int {
-        return createdAt.hashCode()
-    }
-
-    /**
-     * Get the string representation of this client lock.
-     *
-     * @return a string representation of this client lock.
-     **/
-    override fun toString(): String {
-        return "ClientLock(createdAt=$createdAt)"
+        var result = super.hashCode()
+        result = 31 * result + statement.hashCode()
+        return result
     }
 }

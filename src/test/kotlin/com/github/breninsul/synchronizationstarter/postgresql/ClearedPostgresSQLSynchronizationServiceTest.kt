@@ -22,25 +22,44 @@
  * SOFTWARE.
  */
 
-package com.github.breninsul.synchronizationstarter
+package com.github.breninsul.synchronizationstarter.postgresql
 
-import com.github.breninsul.synchronizationstarter.service.LocalSynchronizationService
-import com.github.breninsul.synchronizationstarter.service.LockClearDecorator
+import com.github.breninsul.synchronizationstarter.service.db.PostgresSQLClearDecorator
+import com.github.breninsul.synchronizationstarter.service.db.PostgresSQLSynchronisationService
 import com.github.breninsul.synchronizationstarter.service.sync
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+import org.springframework.context.annotation.Import
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.junit.jupiter.SpringExtension
+import org.testcontainers.containers.PostgreSQLContainer
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.logging.Level
 import java.util.logging.Logger
+import javax.sql.DataSource
 import kotlin.concurrent.thread
 
-class ClearedSynchronizationServiceTest {
-    protected val syncService = LocalSynchronizationService()
+@ExtendWith(SpringExtension::class)
+@Import(DataSourceAutoConfiguration::class)
+class ClearedPostgresSQLSynchronizationServiceTest {
     protected val logger = Logger.getLogger(this.javaClass.name)
+
+    @Autowired
+    lateinit var dataSource: DataSource
+
+    fun getSyncService(): PostgresSQLSynchronisationService {
+        return PostgresSQLSynchronisationService(dataSource, Duration.ofMillis(100))
+    }
 
     @Test
     fun `test clear`() {
-        val clearedSyncService = LockClearDecorator(Duration.ofMillis(100), Duration.ofMillis(10),Duration.ofMillis(10), syncService)
+        val clearedSyncService = PostgresSQLClearDecorator(Duration.ofMillis(100), Duration.ofMillis(10), Duration.ofMillis(10), getSyncService())
         var startedTime: LocalDateTime? = null
         var endedTime: LocalDateTime? = null
         val testSyncId = "Test"
@@ -76,7 +95,7 @@ class ClearedSynchronizationServiceTest {
 
     @Test
     fun `test sync`() {
-        val clearedSyncService = LockClearDecorator(Duration.ofSeconds(100), Duration.ofMillis(10),Duration.ofMillis(10), syncService)
+        val clearedSyncService = PostgresSQLClearDecorator(Duration.ofSeconds(100), Duration.ofMillis(10), Duration.ofMillis(10), getSyncService())
         var startedTime: LocalDateTime? = null
         var endedTime: LocalDateTime? = null
         val testSyncId = "Test"
@@ -108,5 +127,29 @@ class ClearedSynchronizationServiceTest {
         assert(timePairs[1].first > timePairs[0].second)
         val delay = Duration.between(timePairs[0].second, timePairs[1].first)
         logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
+    }
+
+    companion object {
+        val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16.1-alpine3.19")
+
+        @DynamicPropertySource
+        @JvmStatic
+        fun configureProperties(registry: DynamicPropertyRegistry) {
+            registry.add("spring.datasource.url") { postgres.jdbcUrl }
+            registry.add("spring.datasource.username") { postgres.username }
+            registry.add("spring.datasource.password") { postgres.password }
+        }
+
+        @JvmStatic
+        @BeforeAll
+        fun beforeAll() {
+            postgres.start()
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun afterAll() {
+            postgres.stop()
+        }
     }
 }

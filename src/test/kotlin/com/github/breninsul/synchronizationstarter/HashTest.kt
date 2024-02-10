@@ -24,20 +24,17 @@
 
 package com.github.breninsul.synchronizationstarter
 
-import com.github.breninsul.synchronizationstarter.service.sha256Hash
-import com.github.breninsul.synchronizationstarter.service.toBytes
+import com.github.breninsul.synchronizationstarter.service.longHash
 import org.junit.jupiter.api.Test
 import java.util.logging.Logger
 
 class HashTest {
-    protected val logger = Logger.getLogger(this.javaClass.name)
-
     @Test
     fun `test hash map`() {
         val firstValue = mapOf("one" to "second", "two" to "third".repeat(100))
         val secondValue = mapOf("one" to "second", "two" to "third".repeat(100))
-        val firstHash = firstValue.sha256Hash()
-        val secondHash = secondValue.sha256Hash()
+        val firstHash = firstValue.longHash()
+        val secondHash = secondValue.longHash()
         assert(firstHash == secondHash)
     }
 
@@ -45,17 +42,8 @@ class HashTest {
     fun `test hash string`() {
         val firstValue = "one"
         val secondValue = "one"
-        val firstHash = firstValue.sha256Hash()
-        val secondHash = secondValue.sha256Hash()
+        val firstHash = firstValue.longHash()
+        val secondHash = secondValue.longHash()
         assert(firstHash == secondHash)
-    }
-
-    @Test
-    fun `test bytes`() {
-        val firstValue = mapOf("one" to "second", "two" to "third")
-        val secondValue = mapOf("one" to "second", "two" to "third")
-        val firstHash = firstValue.toBytes()
-        val secondHash = secondValue.toBytes()
-        assert(firstHash.contentEquals(secondHash))
     }
 }

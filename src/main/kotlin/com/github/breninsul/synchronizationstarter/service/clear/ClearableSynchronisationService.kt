@@ -22,23 +22,24 @@
  * SOFTWARE.
  */
 
-package com.github.breninsul.synchronizationstarter.service
+package com.github.breninsul.synchronizationstarter.service.clear
 
 import com.github.breninsul.synchronizationstarter.dto.ClientLock
+import com.github.breninsul.synchronizationstarter.service.SynchronizationService
 import java.time.Duration
 
 /**
  * The ClearableSynchronisationService interface extends the SynchronizationService interface.
  * It provides methods to manage and retrieve locks used in synchronized blocks.
  */
-interface ClearableSynchronisationService : SynchronizationService {
+interface ClearableSynchronisationService<T : ClientLock> : SynchronizationService {
     /**
      *  This method returns all the elements that have exceeded their specified lifetime.
      *
      *  @param lifetime A Duration object that specifies the lifetime limit for objects
      *  @return A List of pairs. Each pair includes an object and the associated ClientLock that have exceeded their lifetime
      */
-    fun getAllLocks(lifetime: Duration): List<Pair<Any, ClientLock>>
+    fun getAllLocksAfter(lifetime: Duration): List<Pair<Any, T>>
 
     /**
      *  This method clears the provided lock object.

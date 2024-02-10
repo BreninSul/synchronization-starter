@@ -24,16 +24,20 @@
 
 package com.github.breninsul.synchronizationstarter.config
 
-import com.github.breninsul.synchronizationstarter.service.LocalSynchronizationService
-import com.github.breninsul.synchronizationstarter.service.LockClearDecorator
 import com.github.breninsul.synchronizationstarter.service.SynchronizationService
+import com.github.breninsul.synchronizationstarter.service.db.PostgresSQLClearDecorator
+import com.github.breninsul.synchronizationstarter.service.db.PostgresSQLSynchronisationService
+import com.github.breninsul.synchronizationstarter.service.local.LocalClearDecorator
+import com.github.breninsul.synchronizationstarter.service.local.LocalSynchronizationService
 import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.scheduling.annotation.Scheduled
+import javax.sql.DataSource
 
 @ConditionalOnClass(Scheduled::class)
 @ConditionalOnProperty(prefix = "synchronisation", name = ["disabled"], matchIfMissing = true, havingValue = "false")
@@ -44,11 +48,28 @@ class SynchronisationAutoconfiguration {
     @ConditionalOnMissingBean(SynchronizationService::class)
     @ConditionalOnProperty(prefix = "synchronisation", name = ["mode"], matchIfMissing = true, havingValue = "LOCAL")
     fun getLocalSynchronizationService(synchronisationProperties: SynchronisationProperties): SynchronizationService {
-        val local = LocalSynchronizationService()
+        val local = LocalSynchronizationService(synchronisationProperties.normalLockTime)
         if (synchronisationProperties.lockTimeout.toMillis() < 1) {
             return local
         } else {
-            val cleared = LockClearDecorator(synchronisationProperties.lockTimeout, synchronisationProperties.lockLifetime,synchronisationProperties.clearDelay, local)
+            val cleared = LocalClearDecorator(synchronisationProperties.lockTimeout, synchronisationProperties.lockLifetime, synchronisationProperties.clearDelay, local)
+            return cleared
+        }
+    }
+
+    @Bean
+    @ConditionalOnBean(DataSource::class)
+    @ConditionalOnMissingBean(SynchronizationService::class)
+    @ConditionalOnProperty(prefix = "synchronisation", name = ["mode"], matchIfMissing = true, havingValue = "POSTGRES")
+    fun getDBSynchronizationService(
+        dataSource: DataSource,
+        synchronisationProperties: SynchronisationProperties,
+    ): SynchronizationService {
+        val db = PostgresSQLSynchronisationService(dataSource, synchronisationProperties.normalLockTime)
+        if (synchronisationProperties.lockTimeout.toMillis() < 1) {
+            return db
+        } else {
+            val cleared = PostgresSQLClearDecorator(synchronisationProperties.lockTimeout, synchronisationProperties.lockLifetime, synchronisationProperties.clearDelay, db)
             return cleared
         }
     }

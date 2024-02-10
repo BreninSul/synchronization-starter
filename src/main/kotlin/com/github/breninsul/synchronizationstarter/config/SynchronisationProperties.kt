@@ -27,6 +27,16 @@ package com.github.breninsul.synchronizationstarter.config
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
 
+/**
+ * Configuration properties related to Synchronisation.
+ *
+ * @property disabled A flag indicating whether Synchronisation is disabled.
+ * @property lockTimeout The amount of time that Synchronisation locks can be held before they're timed out.
+ * @property lockLifetime The lifespan of a Synchronisation lock.
+ * @property clearDelay The delay between clearing of expired Synchronisation locks.
+ * @property mode The mode of Synchronisation, which can be either LOCAL, POSTGRES, or ZOOKEEPER.
+ * @property normalLockTime The typical duration for a Synchronisation lock.
+ */
 @ConfigurationProperties("synchronisation")
 data class SynchronisationProperties(
     var disabled: Boolean = false,
@@ -34,10 +44,14 @@ data class SynchronisationProperties(
     var lockLifetime: Duration = Duration.ofMinutes(30),
     var clearDelay: Duration = Duration.ofMinutes(1),
     var mode: MODE = MODE.LOCAL,
+    var normalLockTime: Duration = Duration.ofMillis(100),
 ) {
+    /**
+     * Enum representing the possible modes of operation for Synchronisation.
+     */
     enum class MODE {
         LOCAL,
-        POSTGRESQL,
+        POSTGRES,
         ZOOKEEPER,
     }
 }
