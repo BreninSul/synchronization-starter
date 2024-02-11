@@ -45,6 +45,7 @@ data class SynchronisationProperties(
     var clearDelay: Duration = Duration.ofMinutes(1),
     var mode: MODE = MODE.LOCAL,
     var normalLockTime: Duration = Duration.ofMillis(100),
+    var zooKeeperPathPrefix:String= "/lock_"
 ) {
     /**
      * Enum representing the possible modes of operation for Synchronisation.

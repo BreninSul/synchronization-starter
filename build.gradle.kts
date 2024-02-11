@@ -37,6 +37,7 @@ plugins {
     val springBootVersion = "3.2.2"
     id("java-library")
     id("maven-publish")
+    id("signing")
     id("org.springframework.boot") version springBootVersion
     id("io.spring.dependency-management") version "1.1.4"
     id("org.jetbrains.kotlin.jvm") version kotlinVersion
@@ -97,6 +98,12 @@ publishing {
             version = project.version.toString()
             val softwareComponent = components.first()
             from(softwareComponent)
+            pom {
+                packaging = "jar"
+                name.set("BreninSul Spring Boot Synchronisation Starter")
+                url.set("https://github.com/BreninSul/synchronization-starter")
+                description.set("Starter for synchronisation services. Implementation for ")
+            }
         }
     }
     repositories {

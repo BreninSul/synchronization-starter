@@ -29,6 +29,9 @@ import io.github.breninsul.synchronizationstarter.service.db.PostgresSQLClearDec
 import io.github.breninsul.synchronizationstarter.service.db.PostgresSQLSynchronisationService
 import io.github.breninsul.synchronizationstarter.service.local.LocalClearDecorator
 import io.github.breninsul.synchronizationstarter.service.local.LocalSynchronizationService
+import io.github.breninsul.synchronizationstarter.service.zookeeper.ZookeeperClearDecorator
+import io.github.breninsul.synchronizationstarter.service.zookeeper.ZookeeperSynchronizationService
+import org.apache.zookeeper.ZooKeeper
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
@@ -61,7 +64,7 @@ class SynchronisationAutoconfiguration {
     @ConditionalOnBean(DataSource::class)
     @ConditionalOnMissingBean(SynchronizationService::class)
     @ConditionalOnProperty(prefix = "synchronisation", name = ["mode"], matchIfMissing = true, havingValue = "POSTGRES")
-    fun getDBSynchronizationService(
+    fun getPostgresSQLSynchronisationService(
         dataSource: DataSource,
         synchronisationProperties: SynchronisationProperties,
     ): SynchronizationService {
@@ -70,6 +73,22 @@ class SynchronisationAutoconfiguration {
             return db
         } else {
             val cleared = PostgresSQLClearDecorator(synchronisationProperties.lockTimeout, synchronisationProperties.lockLifetime, synchronisationProperties.clearDelay, db)
+            return cleared
+        }
+    }
+    @Bean
+    @ConditionalOnBean(ZooKeeper::class)
+    @ConditionalOnMissingBean(SynchronizationService::class)
+    @ConditionalOnProperty(prefix = "synchronisation", name = ["mode"], matchIfMissing = true, havingValue = "ZOOKEEPER")
+    fun getZookeeperSynchronizationService(
+        zooKeeper: ZooKeeper,
+        synchronisationProperties: SynchronisationProperties,
+    ): SynchronizationService {
+        val db = ZookeeperSynchronizationService(zooKeeper, synchronisationProperties.normalLockTime,synchronisationProperties.normalLockTime,synchronisationProperties.zooKeeperPathPrefix)
+        if (synchronisationProperties.lockTimeout.toMillis() < 1) {
+            return db
+        } else {
+            val cleared = ZookeeperClearDecorator(synchronisationProperties.lockTimeout, synchronisationProperties.lockLifetime, synchronisationProperties.clearDelay, db)
             return cleared
         }
     }

@@ -52,7 +52,6 @@ class ZookeeperSynchronisationServiceTest {
     protected val logger = Logger.getLogger(this.javaClass.name)
     private val latch = CountDownLatch(1)
 
-    val testingServer = TestingServer(2181, true)
     fun getZooKeeper():ZooKeeper {
         return ZooKeeper("127.0.0.1:2181", 1000000) { event ->
             if (event.state == Watcher.Event.KeeperState.SyncConnected) {
@@ -61,7 +60,7 @@ class ZookeeperSynchronisationServiceTest {
         }
     }
     fun getSyncService(): ZookeeperSynchronizationService  {
-        return ZookeeperSynchronizationService(getZooKeeper(), Duration.ofSeconds(0))
+        return ZookeeperSynchronizationService(getZooKeeper(),Duration.ofMillis(100), Duration.ofSeconds(0),"/lock_")
     }
     @Test
     fun `test sync10`() {
@@ -144,5 +143,7 @@ class ZookeeperSynchronisationServiceTest {
         val delay = Duration.between(timePairs[0].second, timePairs[1].first)
         logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
     }
-
+    companion object{
+        val testingServer = TestingServer(2181, true)
+    }
 }

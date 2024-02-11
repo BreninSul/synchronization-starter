@@ -37,7 +37,7 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 
-open class ZookeeperSynchronizationService(protected val zooKeeper: ZooKeeper, protected val maxLifetime: Duration,val pathPrefix:String="/lock_") : ClearableSynchronisationService<ZookeeperClientLock> {
+open class ZookeeperSynchronizationService(protected val zooKeeper: ZooKeeper, protected val normalLockTime: Duration, protected val maxLifetime: Duration,val pathPrefix:String) : ClearableSynchronisationService<ZookeeperClientLock> {
     protected open val logger: Logger = Logger.getLogger(this.javaClass.name)
     protected open val internalLock = ReentrantLock()
     protected open val locks: ConcurrentMap<Any, ZookeeperClientLock> = ConcurrentHashMap()
@@ -107,7 +107,12 @@ open class ZookeeperSynchronizationService(protected val zooKeeper: ZooKeeper, p
             }
         }
         try {
-            return futureToWait.get()
+            val result = futureToWait.get()
+            val tookMs = System.currentTimeMillis() - time
+            if (tookMs > normalLockTime.toMillis()) {
+                logger.log(Level.SEVERE, "Lock took more then ${normalLockTime.toMillis()}ms $tookMs $id")
+            }
+            return result
         } catch (t: ExecutionException) {
             val parent=t.cause
             if(parent is TimeoutException){
