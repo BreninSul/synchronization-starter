@@ -57,7 +57,7 @@ class PostgresSqlSynchronisationServiceTest {
     }
 
     @Test
-    fun `test sync`() {
+    fun `test sync the same service`() {
         var startedTime: LocalDateTime? = null
         var endedTime: LocalDateTime? = null
         val testSyncId = "Test"
@@ -91,7 +91,42 @@ class PostgresSqlSynchronisationServiceTest {
         val delay = Duration.between(timePairs[0].second, timePairs[1].first)
         logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
     }
-
+    @Test
+    fun `test sync diff services`() {
+        var startedTime: LocalDateTime? = null
+        var endedTime: LocalDateTime? = null
+        val testSyncId = "Test"
+        val syncService = getSyncService()
+        val syncService2 = getSyncService()
+        // Call two threads with the same task
+        val jobThread =
+            thread(start = true) {
+                syncService.sync(testSyncId) {
+                    startedTime = LocalDateTime.now()
+                    Thread.sleep(Duration.ofSeconds(1))
+                    endedTime = LocalDateTime.now()
+                }
+            }
+        var startedTime2: LocalDateTime? = null
+        var endedTime2: LocalDateTime? = null
+        val jobThread2 =
+            thread(start = true) {
+                syncService2.sync(testSyncId) {
+                    startedTime2 = LocalDateTime.now()
+                    Thread.sleep(Duration.ofSeconds(1))
+                    endedTime2 = LocalDateTime.now()
+                }
+            }
+        // wait till end
+        jobThread.join()
+        jobThread2.join()
+        // we can't be sure about threads order, sort start and end time
+        val timePairs = listOf(startedTime!! to endedTime!!, startedTime2!! to endedTime2!!).sortedBy { it.first }
+        // check that there we ordered process
+        assert(timePairs[1].first > timePairs[0].second)
+        val delay = Duration.between(timePairs[0].second, timePairs[1].first)
+        logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
+    }
     companion object {
         val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16.1-alpine3.19")
 

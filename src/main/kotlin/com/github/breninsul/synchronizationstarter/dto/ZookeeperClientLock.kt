@@ -24,55 +24,52 @@
 
 package com.github.breninsul.synchronizationstarter.dto
 
+import io.netty.util.concurrent.CompleteFuture
 import java.sql.Statement
 import java.time.LocalDateTime
+import java.util.*
+import java.util.concurrent.CompletableFuture
 
 /**
- * This class represents a client lock for a database client. It extends the ClientLock class.
+ * This class represents a lock which is associated with a Zookeeper client.
+ * It extends the `ClientLock` class and includes a `CompletableFuture` to manage asynchronous operations.
  *
- * @property statement The database statement associated with the lock.
- * @property createdAt The timestamp when the lock was created. Default value is the current time.
- *
- * @constructor Initializes a DBClientLock instance with the provided database statement and creation timestamp.
- *
+ * @property createdAt The time at which the lock was created. By default, it's the time of object instantiation.
  */
-class DBClientLock(
-    val statement: Statement,
+class ZookeeperClientLock(
     createdAt: LocalDateTime = LocalDateTime.now(),
 ) : ClientLock(createdAt) {
+
     /**
-     * Checks if this object is equal to another.
+     * Overridden equals method.
      *
-     * @param other The object to check for equality.
-     * @return True if the objects are equal, false otherwise.
+     * @param other the object to compare with this instance.
+     * @return true if the objects are equal, false otherwise.
      */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
         if (!super.equals(other)) return false
-
-        other as DBClientLock
-
-        return statement == other.statement
+        return true
     }
 
     /**
-     * Generates a hash code for the object.
+     * Overridden hashCode method.
      *
-     * @return The generated hash code.
+     * @return a hash code value for the object.
      */
     override fun hashCode(): Int {
         var result = super.hashCode()
-        result = 31 * result + statement.hashCode()
         return result
     }
+
     /**
-     * Returns a string representation of the object.
+     * Overridden toString method.
      *
-     * @return A string that contains the statement and the creation time of the lock.
+     * @return a string representation of the object.
      */
     override fun toString(): String {
-        return "DBClientLock(statement=$statement,createdAt=${createdAt})"
+        return "ZookeeperClientLock(createdAt=${createdAt})"
     }
 
 }

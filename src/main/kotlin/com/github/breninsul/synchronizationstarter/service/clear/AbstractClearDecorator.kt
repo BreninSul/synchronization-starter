@@ -75,7 +75,7 @@ abstract class AbstractClearDecorator<T : ClientLock>(
                         toUnlock
                             .filter { filterLocked(it) }
                             .forEach { l ->
-                                delegate.unlockTimeOuted(l.first, lockLifetime)
+                                delegate.unlockTimeOuted(l.first, lockTimeout)
                                 logger.log(Level.SEVERE, "Lock has been blocked before clear :${l.first}. Took ${System.currentTimeMillis() - l.second.createdAt.toEpochSecond(ZoneOffset.of(ZoneId.systemDefault().id))}")
                             }
                         val toClear = delegate.getAllLocksAfter(lifetime = lockLifetime)

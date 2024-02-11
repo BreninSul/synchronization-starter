@@ -69,6 +69,7 @@ dependencies {
     api("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.springframework.boot:spring-boot-starter-jdbc:${Constraints.SPRING_BOOT_VERSION}")
     implementation("org.postgresql:postgresql:42.7.1")
+    implementation("org.apache.zookeeper:zookeeper:3.9.1")
     kapt("org.springframework.boot:spring-boot-autoconfigure-processor")
     kapt("org.springframework.boot:spring-boot-configuration-processor")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

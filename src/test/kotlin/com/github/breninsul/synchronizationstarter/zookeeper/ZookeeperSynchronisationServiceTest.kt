@@ -22,72 +22,50 @@
  * SOFTWARE.
  */
 
-package com.github.breninsul.synchronizationstarter.local
+package com.github.breninsul.synchronizationstarter.zookeeper
 
-import com.github.breninsul.synchronizationstarter.service.local.LocalClearDecorator
-import com.github.breninsul.synchronizationstarter.service.local.LocalSynchronizationService
+import com.github.breninsul.synchronizationstarter.service.db.PostgresSQLSynchronisationService
 import com.github.breninsul.synchronizationstarter.service.sync
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+import org.springframework.context.annotation.Import
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.junit.jupiter.SpringExtension
+import org.testcontainers.containers.PostgreSQLContainer
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.logging.Level
 import java.util.logging.Logger
+import javax.sql.DataSource
 import kotlin.concurrent.thread
 
-class ClearedLocalSynchronizationServiceTest {
+@ExtendWith(SpringExtension::class)
+@Import(DataSourceAutoConfiguration::class)
+class ZookeeperSynchronisationServiceTest {
     protected val logger = Logger.getLogger(this.javaClass.name)
-    fun getClearSyncService(
-        lockLifetime: Duration,
-        lockTimeout: Duration,
-    ): LocalClearDecorator {
-        return LocalClearDecorator(lockLifetime, lockTimeout, Duration.ofMillis(10), LocalSynchronizationService(Duration.ofMillis(100)))
-    }
-    @Test
-    fun `test clear`() {
-        val clearedSyncService = getClearSyncService(Duration.ofMillis(100), Duration.ofMillis(10))
-        var startedTime: LocalDateTime? = null
-        var endedTime: LocalDateTime? = null
-        val testSyncId = "Test"
-        // Call two threads with the same task
-        val jobThread =
-            thread(start = true) {
-                clearedSyncService.sync(testSyncId) {
-                    startedTime = LocalDateTime.now()
-                    Thread.sleep(Duration.ofSeconds(1))
-                    endedTime = LocalDateTime.now()
-                }
-            }
-        var startedTime2: LocalDateTime? = null
-        var endedTime2: LocalDateTime? = null
-        val jobThread2 =
-            thread(start = true) {
-                clearedSyncService.sync(testSyncId) {
-                    startedTime2 = LocalDateTime.now()
-                    Thread.sleep(Duration.ofSeconds(1))
-                    endedTime2 = LocalDateTime.now()
-                }
-            }
-        // wait till end
-        jobThread.join()
-        jobThread2.join()
-        // we can't be sure about threads order, sort start and end time
-        val timePairs = listOf(startedTime!! to endedTime!!, startedTime2!! to endedTime2!!).sortedBy { it.first }
 
-        val delay = Duration.between(timePairs[0].first, timePairs[1].first)
-        assert(delay < Duration.ofSeconds(1))
-        logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
+    @Autowired
+    lateinit var dataSource: DataSource
+
+    fun getSyncService(): PostgresSQLSynchronisationService  {
+        return PostgresSQLSynchronisationService(dataSource, Duration.ofMillis(100))
     }
 
     @Test
     fun `test sync`() {
-        val clearedSyncService = getClearSyncService(Duration.ofSeconds(100), Duration.ofSeconds(100))
         var startedTime: LocalDateTime? = null
         var endedTime: LocalDateTime? = null
         val testSyncId = "Test"
+        val syncService = getSyncService()
         // Call two threads with the same task
         val jobThread =
             thread(start = true) {
-                clearedSyncService.sync(testSyncId) {
+                syncService.sync(testSyncId) {
                     startedTime = LocalDateTime.now()
                     Thread.sleep(Duration.ofSeconds(1))
                     endedTime = LocalDateTime.now()
@@ -97,7 +75,7 @@ class ClearedLocalSynchronizationServiceTest {
         var endedTime2: LocalDateTime? = null
         val jobThread2 =
             thread(start = true) {
-                clearedSyncService.sync(testSyncId) {
+                syncService.sync(testSyncId) {
                     startedTime2 = LocalDateTime.now()
                     Thread.sleep(Duration.ofSeconds(1))
                     endedTime2 = LocalDateTime.now()
@@ -114,4 +92,27 @@ class ClearedLocalSynchronizationServiceTest {
         logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
     }
 
+    companion object {
+        val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16.1-alpine3.19")
+
+        @DynamicPropertySource
+        @JvmStatic
+        fun configureProperties(registry: DynamicPropertyRegistry) {
+            registry.add("spring.datasource.url") { postgres.jdbcUrl }
+            registry.add("spring.datasource.username") { postgres.username }
+            registry.add("spring.datasource.password") { postgres.password }
+        }
+
+        @JvmStatic
+        @BeforeAll
+        fun beforeAll() {
+            postgres.start()
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun afterAll() {
+            postgres.stop()
+        }
+    }
 }

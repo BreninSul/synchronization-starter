@@ -82,8 +82,8 @@ open class PostgresSQLSynchronisationService(protected val dataSource: DataSourc
             val rs =
                 statement.executeQuery(
                     """
-                SELECT case when pg_try_advisory_xact_lock(${id.longHash()}) then true else 
-                (select false from pg_advisory_xact_lock(${id.longHash()})) end 
+                SELECT case when pg_try_advisory_xact_lock(${id.longHash()}) then false else 
+                (select true from pg_advisory_xact_lock(${id.longHash()})) end 
                     """.trimMargin(),
                 )
             rs.next()
@@ -138,6 +138,7 @@ open class PostgresSQLSynchronisationService(protected val dataSource: DataSourc
     /**
      * Performs the after method.
      * @param id The id of the lock.
+     * @param statement DB connection statement
      */
     protected open fun getLock(
         id: Any,
