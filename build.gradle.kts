@@ -44,7 +44,7 @@ plugins {
     id("org.jetbrains.kotlin.kapt") version kotlinVersion
 }
 
-group = "com.github.breninsul"
+group = "io.github.breninsul"
 version = "1.0.0"
 
 java {

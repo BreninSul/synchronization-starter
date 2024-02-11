@@ -25,7 +25,7 @@ repositories {
 ````kotlin
 dependencies {
 //Other dependencies
-    implementation("com.github.breninsul:synchronization-starter:1.0.0")
+    implementation("io.github.breninsul:synchronization-starter:1.0.0")
 //Other dependencies
 }
 
