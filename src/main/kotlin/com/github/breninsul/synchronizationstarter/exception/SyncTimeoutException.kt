@@ -22,20 +22,9 @@
  * SOFTWARE.
  */
 
-package com.github.breninsul.synchronizationstarter.service.local
+package com.github.breninsul.synchronizationstarter.exception
 
-import com.github.breninsul.synchronizationstarter.dto.LocalClientLock
-import com.github.breninsul.synchronizationstarter.exception.SyncTimeoutException
-import com.github.breninsul.synchronizationstarter.service.clear.AbstractClearDecorator
 import java.time.Duration
+import java.util.concurrent.TimeoutException
 
-open class LocalClearDecorator(
-    lockLifetime: Duration,
-    lockTimeout: Duration,
-    clearDelay: Duration,
-    val localDelegate: LocalSynchronizationService,
-) : AbstractClearDecorator<LocalClientLock>(lockLifetime, lockTimeout, clearDelay, localDelegate) {
-    override fun filterLocked(t: Pair<Any, LocalClientLock>): Boolean {
-        return t.second.lock.isWriteLocked
-    }
-}
+open class SyncTimeoutException(id:Any,timeoutMillis:Long,actualTimeMillis:Long):TimeoutException("Lock timeout ${id}. Max:${timeoutMillis}ms. Actual:${actualTimeMillis}ms")

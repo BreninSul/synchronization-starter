@@ -22,20 +22,21 @@
  * SOFTWARE.
  */
 
-package com.github.breninsul.synchronizationstarter.service.local
+package com.github.breninsul.synchronizationstarter.service.zookeeper
 
-import com.github.breninsul.synchronizationstarter.dto.LocalClientLock
-import com.github.breninsul.synchronizationstarter.exception.SyncTimeoutException
+import com.github.breninsul.synchronizationstarter.dto.DBClientLock
+import com.github.breninsul.synchronizationstarter.dto.ZookeeperClientLock
 import com.github.breninsul.synchronizationstarter.service.clear.AbstractClearDecorator
+import com.github.breninsul.synchronizationstarter.service.clear.ClearableSynchronisationService
 import java.time.Duration
 
-open class LocalClearDecorator(
+open class ZookeeperClearDecorator(
     lockLifetime: Duration,
     lockTimeout: Duration,
     clearDelay: Duration,
-    val localDelegate: LocalSynchronizationService,
-) : AbstractClearDecorator<LocalClientLock>(lockLifetime, lockTimeout, clearDelay, localDelegate) {
-    override fun filterLocked(t: Pair<Any, LocalClientLock>): Boolean {
-        return t.second.lock.isWriteLocked
+    delegate: ClearableSynchronisationService<ZookeeperClientLock>,
+) : AbstractClearDecorator<ZookeeperClientLock>(lockLifetime, lockTimeout, clearDelay, delegate) {
+    override fun filterLocked(t: Pair<Any, ZookeeperClientLock>): Boolean {
+        return true
     }
 }

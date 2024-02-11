@@ -75,6 +75,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.apache.curator:curator-test:5.6.0")
 }
 
 tasks.withType<KotlinCompile> {

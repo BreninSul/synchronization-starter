@@ -24,17 +24,14 @@
 
 package com.github.breninsul.synchronizationstarter.dto
 
-import io.netty.util.concurrent.CompleteFuture
-import java.sql.Statement
 import java.time.LocalDateTime
-import java.util.*
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * This class represents a lock which is associated with a Zookeeper client.
  * It extends the `ClientLock` class and includes a `CompletableFuture` to manage asynchronous operations.
  *
- * @property createdAt The time at which the lock was created. By default, it's the time of object instantiation.
+ * @property usedAt The time at which the lock was created. By default, it's the time of object instantiation.
  */
 class ZookeeperClientLock(
     createdAt: LocalDateTime = LocalDateTime.now(),
@@ -69,7 +66,7 @@ class ZookeeperClientLock(
      * @return a string representation of the object.
      */
     override fun toString(): String {
-        return "ZookeeperClientLock(createdAt=${createdAt})"
+        return "ZookeeperClientLock(usedAt=${usedAt})"
     }
 
 }

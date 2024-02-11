@@ -24,10 +24,12 @@
 
 package com.github.breninsul.synchronizationstarter.postgresql
 
+import com.github.breninsul.synchronizationstarter.exception.SyncTimeoutException
 import com.github.breninsul.synchronizationstarter.service.db.PostgresSQLClearDecorator
 import com.github.breninsul.synchronizationstarter.service.db.PostgresSQLSynchronisationService
 import com.github.breninsul.synchronizationstarter.service.sync
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -58,87 +60,127 @@ class ClearedPostgresSQLSynchronizationServiceTest {
     }
 
     fun getClearSyncService(
-        lockLifetime: Duration,
         lockTimeout: Duration,
     ): PostgresSQLClearDecorator {
-        return PostgresSQLClearDecorator(lockLifetime, lockTimeout, Duration.ofMillis(10), getSyncService())
+        return PostgresSQLClearDecorator(Duration.ofSeconds(1000), lockTimeout, Duration.ofMillis(10), getSyncService())
+    }
+
+    @Test
+    fun `test clear10`() {
+        for (i in 1..10) {
+            `test clear`()
+        }
     }
 
     @Test
     fun `test clear`() {
-        val clearedSyncService = getClearSyncService(Duration.ofMillis(100), Duration.ofMillis(10))
-        var startedTime: LocalDateTime? = null
-        var endedTime: LocalDateTime? = null
+        val clearedSyncService = getClearSyncService(Duration.ofMillis(10))
+        val exceptions = mutableListOf<SyncTimeoutException>()
         val testSyncId = "Test"
+        val time=System.currentTimeMillis()
         // Call two threads with the same task
         val jobThread =
             thread(start = true) {
-                clearedSyncService.sync(testSyncId) {
-                    startedTime = LocalDateTime.now()
-                    Thread.sleep(Duration.ofSeconds(1))
-                    endedTime = LocalDateTime.now()
+                try {
+                    clearedSyncService.sync(testSyncId) {
+                        Thread.sleep(Duration.ofSeconds(1))
+                    }
+                } catch (t: SyncTimeoutException) {
+                    exceptions.add(t)
                 }
             }
-        var startedTime2: LocalDateTime? = null
-        var endedTime2: LocalDateTime? = null
         val jobThread2 =
             thread(start = true) {
-                clearedSyncService.sync(testSyncId) {
-                    startedTime2 = LocalDateTime.now()
-                    Thread.sleep(Duration.ofSeconds(1))
-                    endedTime2 = LocalDateTime.now()
+                try {
+                    clearedSyncService.sync(testSyncId) {
+                        Thread.sleep(Duration.ofSeconds(1))
+                    }
+                } catch (t: SyncTimeoutException) {
+                    exceptions.add(t)
+                }
+            }
+        val jobThread3 =
+            thread(start = true) {
+                try {
+                    clearedSyncService.sync(testSyncId) {
+                        Thread.sleep(Duration.ofSeconds(1))
+                    }
+                } catch (t: SyncTimeoutException) {
+                    exceptions.add(t)
                 }
             }
         // wait till end
         jobThread.join()
         jobThread2.join()
+        jobThread3.join()
+        val took=System.currentTimeMillis()-time
+
         // we can't be sure about threads order, sort start and end time
-        val timePairs = listOf(startedTime!! to endedTime!!, startedTime2!! to endedTime2!!).sortedBy { it.first }
-
-        val delay = Duration.between(timePairs[0].first, timePairs[1].first)
-        assert(delay < Duration.ofSeconds(1))
-        logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
+        Assertions.assertEquals(2, exceptions.size)
+        Assertions.assertTrue(took>=1000,"Took ${took}<1000")
+        Assertions.assertTrue(took<2000,"Took ${took}>2000")
+        logger.log(Level.INFO, "Delay was ${took}")
     }
-
+    @Test
+    fun `test clear diff services10`() {
+        for (i in 1..10) {
+            `test clear diff services`()
+        }
+    }
     @Test
     fun `test clear diff services`() {
-        var startedTime: LocalDateTime? = null
-        var endedTime: LocalDateTime? = null
+        val exceptions = mutableListOf<SyncTimeoutException>()
         val testSyncId = "Test"
+        val time=System.currentTimeMillis()
         // Call two threads with the same task
         val jobThread =
             thread(start = true) {
-                getClearSyncService(Duration.ofMillis(100), Duration.ofMillis(10)).sync(testSyncId) {
-                    startedTime = LocalDateTime.now()
-                    Thread.sleep(Duration.ofSeconds(1))
-                    endedTime = LocalDateTime.now()
+                try {
+                    getClearSyncService(Duration.ofMillis(10)).sync(testSyncId) {
+                        Thread.sleep(Duration.ofSeconds(1))
+                    }
+                } catch (t: SyncTimeoutException) {
+                    exceptions.add(t)
                 }
             }
-        var startedTime2: LocalDateTime? = null
-        var endedTime2: LocalDateTime? = null
         val jobThread2 =
             thread(start = true) {
-                getClearSyncService(Duration.ofMillis(100), Duration.ofMillis(10)).sync(testSyncId) {
-                    startedTime2 = LocalDateTime.now()
-                    Thread.sleep(Duration.ofSeconds(1))
-                    endedTime2 = LocalDateTime.now()
+                try {
+                    getClearSyncService(Duration.ofMillis(10)).sync(testSyncId) {
+                        Thread.sleep(Duration.ofSeconds(1))
+                    }
+                } catch (t: SyncTimeoutException) {
+                    exceptions.add(t)
+                }
+            }
+        val jobThread3 =
+            thread(start = true) {
+                try {
+                    getClearSyncService(Duration.ofMillis(10)).sync(testSyncId) {
+                        Thread.sleep(Duration.ofSeconds(1))
+                    }
+                } catch (t: SyncTimeoutException) {
+                    exceptions.add(t)
                 }
             }
         // wait till end
         jobThread.join()
         jobThread2.join()
-        // we can't be sure about threads order, sort start and end time
-        val timePairs = listOf(startedTime!! to endedTime!!, startedTime2!! to endedTime2!!).sortedBy { it.first }
+        jobThread3.join()
+        val took=System.currentTimeMillis()-time
 
-        val delay = Duration.between(timePairs[0].first, timePairs[1].first)
-        assert(delay < Duration.ofSeconds(1))
-        logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
+        // we can't be sure about threads order, sort start and end time
+        Assertions.assertEquals(2, exceptions.size)
+        Assertions.assertTrue(took>=1000,"Took ${took}<1000")
+        Assertions.assertTrue(took<2000,"Took ${took}>2000")
+        logger.log(Level.INFO, "Delay was ${took}")
     }
+
 
 
     @Test
     fun `test sync`() {
-        val clearedSyncService = getClearSyncService(Duration.ofSeconds(100), Duration.ofSeconds(100))
+        val clearedSyncService = getClearSyncService( Duration.ofSeconds(10))
         var startedTime: LocalDateTime? = null
         var endedTime: LocalDateTime? = null
         val testSyncId = "Test"
@@ -180,7 +222,7 @@ class ClearedPostgresSQLSynchronizationServiceTest {
         // Call two threads with the same task
         val jobThread =
             thread(start = true) {
-                getClearSyncService(Duration.ofSeconds(100), Duration.ofSeconds(100)).sync(testSyncId) {
+                getClearSyncService( Duration.ofSeconds(10)).sync(testSyncId) {
                     startedTime = LocalDateTime.now()
                     Thread.sleep(Duration.ofSeconds(1))
                     endedTime = LocalDateTime.now()
@@ -190,7 +232,7 @@ class ClearedPostgresSQLSynchronizationServiceTest {
         var endedTime2: LocalDateTime? = null
         val jobThread2 =
             thread(start = true) {
-                getClearSyncService(Duration.ofSeconds(100), Duration.ofSeconds(100)).sync(testSyncId) {
+                getClearSyncService(Duration.ofSeconds(10)).sync(testSyncId) {
                     startedTime2 = LocalDateTime.now()
                     Thread.sleep(Duration.ofSeconds(1))
                     endedTime2 = LocalDateTime.now()

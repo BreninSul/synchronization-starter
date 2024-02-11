@@ -25,6 +25,8 @@
 package com.github.breninsul.synchronizationstarter.dto
 
 import java.time.LocalDateTime
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.StampedLock
 
 /**
@@ -32,7 +34,7 @@ import java.util.concurrent.locks.StampedLock
  * It encapsulates StampedLock instance with the creation timestamp and a stamp that may be used for operation status tracking.
  *
  * @property lock StampedLock instance.
- * @property createdAt LocalDateTime instance representing creation timestamp of the lock.
+ * @property usedAt LocalDateTime instance representing creation timestamp of the lock.
  * @property stamp Long value representing a stamp for lock operations that might be null.
  */
 open class LocalClientLock(
@@ -47,7 +49,7 @@ open class LocalClientLock(
      * @return Returns a string representing the current instance of ClientLock object.
      */
     override fun toString(): String {
-        return "ClientLock(lock=$lock, createdAt=$createdAt, stamp=$stamp)"
+        return "ClientLock(lock=$lock, usedAt=$usedAt, stamp=$stamp)"
     }
 
     /**
@@ -62,7 +64,7 @@ open class LocalClientLock(
         other as LocalClientLock
 
         if (lock != other.lock) return false
-        if (createdAt != other.createdAt) return false
+        if (usedAt != other.usedAt) return false
         if (stamp != other.stamp) return false
 
         return true
@@ -74,7 +76,7 @@ open class LocalClientLock(
      */
     override fun hashCode(): Int {
         var result = lock.hashCode()
-        result = 31 * result + createdAt.hashCode()
+        result = 31 * result + usedAt.hashCode()
         result = 31 * result + (stamp?.hashCode() ?: 0)
         return result
     }

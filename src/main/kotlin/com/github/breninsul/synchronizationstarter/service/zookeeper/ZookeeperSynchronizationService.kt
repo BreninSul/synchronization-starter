@@ -25,6 +25,7 @@
 package com.github.breninsul.synchronizationstarter.service.zookeeper
 
 import com.github.breninsul.synchronizationstarter.dto.ZookeeperClientLock
+import com.github.breninsul.synchronizationstarter.exception.SyncTimeoutException
 import com.github.breninsul.synchronizationstarter.service.clear.ClearableSynchronisationService
 import com.github.breninsul.synchronizationstarter.service.longHash
 import org.apache.zookeeper.*
@@ -36,34 +37,53 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 
-open class ZookeeperSynchronizationService(protected val zooKeeper: ZooKeeper, protected val maxLifetime: Duration) : ClearableSynchronisationService<ZookeeperClientLock> {
+open class ZookeeperSynchronizationService(protected val zooKeeper: ZooKeeper, protected val maxLifetime: Duration,val pathPrefix:String="/lock_") : ClearableSynchronisationService<ZookeeperClientLock> {
     protected open val logger: Logger = Logger.getLogger(this.javaClass.name)
     protected open val internalLock = ReentrantLock()
     protected open val locks: ConcurrentMap<Any, ZookeeperClientLock> = ConcurrentHashMap()
     override fun getAllLocksAfter(lifetime: Duration): List<Pair<Any, ZookeeperClientLock>> {
-        TODO("Not yet implemented")
+        val clearBefore = LocalDateTime.now().minus(lifetime)
+        return locks.filter { it.value.usedAt.isBefore(clearBefore) }.map { it.key to it.value }
     }
 
     override fun clear(id: Any) {
-        TODO("Not yet implemented")
+        internalLock.lock()
+        try {
+            val clientLock = getLock(id)
+            locks.remove(id)
+        } finally {
+            internalLock.unlock()
+        }
     }
 
     override fun unlockTimeOuted(id: Any, lifetime: Duration) {
-        TODO("Not yet implemented")
+        val clientLock = getLock(id)
+        if (clientLock?.usedAt?.isBefore(LocalDateTime.now().minus(lifetime)) == true) {
+            clientLock.isTimeout.set(true)
+            unlock(clientLock)
+        } else {
+            logger.log(Level.FINEST, "Lock is not timed out!")
+        }
+    }
+
+    override fun getLock(id: Any): ZookeeperClientLock? {
+        return locks[id]
     }
 
     override fun before(id: Any): Boolean {
-        return before(id,false)
+        return before(id, false)
     }
-    protected open fun before(id: Any,completeAnswer:Boolean ): Boolean {
-        val lockId = "lock_${id.longHash()}"
-        val lock = getLock(id)
+
+    protected open fun before(id: Any, completeAnswer: Boolean): Boolean {
+        val time=System.currentTimeMillis()
+        val lockId = getLockId(id)
         val futureToWait = CompletableFuture<Boolean>()
         if (maxLifetime.toMillis() > 0) {
             futureToWait.orTimeout(maxLifetime.toMillis(), TimeUnit.MILLISECONDS);
         }
         try {
             zooKeeper.create(lockId, byteArrayOf(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL)
+            val lock = getOrCreateLock(id)
             futureToWait.complete(completeAnswer)
         } catch (e: KeeperException.NodeExistsException) {
             val state = zooKeeper.exists(lockId, object : Watcher {
@@ -74,7 +94,7 @@ open class ZookeeperSynchronizationService(protected val zooKeeper: ZooKeeper, p
                         try {
                             val state = zooKeeper.exists(lockId, this)
                             if (state == null) {
-                                futureToWait.complete(before(id,true))
+                                futureToWait.complete(before(id, true))
                             }
                         } catch (t: Throwable) {
                             logger.log(Level.SEVERE, "Error reset watcher to zookeeper ${lockId}", t)
@@ -88,27 +108,38 @@ open class ZookeeperSynchronizationService(protected val zooKeeper: ZooKeeper, p
         }
         try {
             return futureToWait.get()
-        } catch (t:TimeoutException){
-            unlock(id,lock)
-            return true
+        } catch (t: ExecutionException) {
+            val parent=t.cause
+            if(parent is TimeoutException){
+                unlock(id)
+                throw SyncTimeoutException(id,maxLifetime.toMillis(),System.currentTimeMillis()-time)
+            } else{
+                throw parent?:t
+            }
         }
     }
 
     override fun after(id: Any) {
-        val clientLock = locks[id]
+        val clientLock = getLock(id)
         if (clientLock == null) {
             logger.log(Level.SEVERE, "No lock for  $id")
         } else {
             logger.log(Level.FINEST, "Lock for $id released")
-            unlock(id, clientLock)
+            unlock(id)
+            internalLock.lock()
+            try {
+                locks.remove(id)
+            }finally {
+                internalLock.unlock()
+            }
         }
     }
 
 
-    protected open fun getLock(id: Any): ZookeeperClientLock {
+    protected open fun getOrCreateLock(id: Any): ZookeeperClientLock {
         internalLock.lock()
         try {
-            val clientLock = locks[id]
+            val clientLock = getLock(id)
             return if (clientLock == null) {
                 val lock = ZookeeperClientLock()
                 locks[id] = lock
@@ -124,18 +155,18 @@ open class ZookeeperSynchronizationService(protected val zooKeeper: ZooKeeper, p
     /**
      * Unlocks a client lock.
      * @param id Lock id
-     * @param l The client lock to unlock.
      */
-    protected open fun unlock(id: Any, l: ZookeeperClientLock) {
-        val lockId = "lock_${id.longHash()}"
+    protected open fun unlock(id: Any) {
+        val lockId = getLockId(id)
         internalLock.lock()
         try {
             zooKeeper.delete(lockId, -1)
-            l.createdAt = LocalDateTime.now()
         } catch (t: Throwable) {
             logger.log(Level.WARNING, "Error unlocking lock ! ${t.javaClass}:${t.message}", t)
         } finally {
             internalLock.unlock()
         }
     }
+
+    protected open fun getLockId(id: Any) = "$pathPrefix${id.longHash()}"
 }

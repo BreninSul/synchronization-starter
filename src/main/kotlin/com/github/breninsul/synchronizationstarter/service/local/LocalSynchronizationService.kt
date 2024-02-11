@@ -42,13 +42,13 @@ open class LocalSynchronizationService(protected val normalLockTime: Duration) :
 
     override fun getAllLocksAfter(lifetime: Duration): List<Pair<Any, LocalClientLock>> {
         val clearBefore = LocalDateTime.now().minus(lifetime)
-        return locks.filter { it.value.createdAt.isBefore(clearBefore) }.map { it.key to it.value }
+        return locks.filter { it.value.usedAt.isBefore(clearBefore) }.map { it.key to it.value }
     }
 
     override fun clear(id: Any) {
         internalLock.lock()
         try {
-            val clientLock = locks[id]
+            val clientLock = getLock(id)
             if (clientLock?.lock?.isWriteLocked == false) {
                 locks.remove(id)
                 if (clientLock.lock.isWriteLocked) {
@@ -65,21 +65,31 @@ open class LocalSynchronizationService(protected val normalLockTime: Duration) :
         id: Any,
         lifetime: Duration,
     ) {
-        val clientLock = locks[id]
-        if (clientLock?.createdAt?.isBefore(LocalDateTime.now().minus(lifetime)) == true) {
+        val clientLock = getLock(id)
+        if (clientLock?.usedAt?.isBefore(LocalDateTime.now().minus(lifetime)) == true) {
+            clientLock.isTimeout.set(true)
             unlock(clientLock)
         } else {
             logger.log(Level.FINEST, "Lock is not timed out!")
         }
     }
 
+    override fun getLock(id: Any): LocalClientLock? {
+        return locks[id]
+    }
+
     override fun before(id: Any): Boolean {
         logger.log(Level.FINEST, "Lock for $id set")
         val time = System.currentTimeMillis()
-        val lock = getLock(id)
+        val lock = getOrCreateLock(id)
         val locked: Boolean = lock.lock.isWriteLocked
         val stamp: Long = lock.lock.writeLock()
-        lock.stamp = (stamp)
+        internalLock.lock()
+        try {
+            lock.stamp=(stamp)
+        }finally {
+            internalLock.unlock()
+        }
         val tookMs = System.currentTimeMillis() - time
         logger.log(Level.FINEST, "Lock $id is locked : $locked .Lock Took $tookMs ms")
         if (tookMs > normalLockTime.toMillis()) {
@@ -93,10 +103,10 @@ open class LocalSynchronizationService(protected val normalLockTime: Duration) :
      * @param id The id of the lock.
      * @return The lock associated with the given id.
      */
-    protected open fun getLock(id: Any,): LocalClientLock {
+    protected open fun getOrCreateLock(id: Any): LocalClientLock {
         internalLock.lock()
         try {
-            val clientLock = locks[id]
+            val clientLock = getLock(id)
             return if (clientLock == null) {
                 val lock = LocalClientLock()
                 locks[id] = lock
@@ -114,12 +124,13 @@ open class LocalSynchronizationService(protected val normalLockTime: Duration) :
      * @param id The id of the lock.
      */
     override fun after(id: Any) {
-        val clientLock = locks[id]
+        val clientLock = getLock(id)
         if (clientLock == null) {
             logger.log(Level.SEVERE, "No lock for  $id")
         } else {
             logger.log(Level.FINEST, "Lock for $id released")
             unlock(clientLock)
+            clientLock.usedAt= LocalDateTime.now()
         }
     }
 
@@ -131,8 +142,9 @@ open class LocalSynchronizationService(protected val normalLockTime: Duration) :
         internalLock.lock()
         try {
             val lock: StampedLock = l.lock
-            lock.unlockWrite(l.stamp!!)
-            l.createdAt= LocalDateTime.now()
+            if (lock.isWriteLocked) {
+                lock.unlockWrite(l.stamp!!)
+            }
         } catch (t: Throwable) {
             logger.log(Level.WARNING, "Error unlocking lock ! ${t.javaClass}:${t.message}", t)
         } finally {

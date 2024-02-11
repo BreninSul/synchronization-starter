@@ -24,8 +24,11 @@
 
 package com.github.breninsul.synchronizationstarter.zookeeper
 
-import com.github.breninsul.synchronizationstarter.service.db.PostgresSQLSynchronisationService
 import com.github.breninsul.synchronizationstarter.service.sync
+import com.github.breninsul.synchronizationstarter.service.zookeeper.ZookeeperSynchronizationService
+import org.apache.curator.test.TestingServer
+import org.apache.zookeeper.Watcher
+import org.apache.zookeeper.ZooKeeper
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -39,23 +42,33 @@ import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.testcontainers.containers.PostgreSQLContainer
 import java.time.Duration
 import java.time.LocalDateTime
+import java.util.concurrent.CountDownLatch
 import java.util.logging.Level
 import java.util.logging.Logger
 import javax.sql.DataSource
 import kotlin.concurrent.thread
 
-@ExtendWith(SpringExtension::class)
-@Import(DataSourceAutoConfiguration::class)
 class ZookeeperSynchronisationServiceTest {
     protected val logger = Logger.getLogger(this.javaClass.name)
+    private val latch = CountDownLatch(1)
 
-    @Autowired
-    lateinit var dataSource: DataSource
-
-    fun getSyncService(): PostgresSQLSynchronisationService  {
-        return PostgresSQLSynchronisationService(dataSource, Duration.ofMillis(100))
+    val testingServer = TestingServer(2181, true)
+    fun getZooKeeper():ZooKeeper {
+        return ZooKeeper("127.0.0.1:2181", 1000000) { event ->
+            if (event.state == Watcher.Event.KeeperState.SyncConnected) {
+                latch.countDown()
+            }
+        }
     }
-
+    fun getSyncService(): ZookeeperSynchronizationService  {
+        return ZookeeperSynchronizationService(getZooKeeper(), Duration.ofSeconds(0))
+    }
+    @Test
+    fun `test sync10`() {
+        for (i in 1..10) {
+            `test sync`()
+        }
+    }
     @Test
     fun `test sync`() {
         var startedTime: LocalDateTime? = null
@@ -91,28 +104,45 @@ class ZookeeperSynchronisationServiceTest {
         val delay = Duration.between(timePairs[0].second, timePairs[1].first)
         logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
     }
-
-    companion object {
-        val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16.1-alpine3.19")
-
-        @DynamicPropertySource
-        @JvmStatic
-        fun configureProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url") { postgres.jdbcUrl }
-            registry.add("spring.datasource.username") { postgres.username }
-            registry.add("spring.datasource.password") { postgres.password }
-        }
-
-        @JvmStatic
-        @BeforeAll
-        fun beforeAll() {
-            postgres.start()
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun afterAll() {
-            postgres.stop()
+    @Test
+    fun `test sync diff services10`() {
+        for (i in 1..10) {
+            `test sync`()
         }
     }
+    @Test
+    fun `test sync diff services`() {
+        var startedTime: LocalDateTime? = null
+        var endedTime: LocalDateTime? = null
+        val testSyncId = "Test"
+        // Call two threads with the same task
+        val jobThread =
+            thread(start = true) {
+                getSyncService().sync(testSyncId) {
+                    startedTime = LocalDateTime.now()
+                    Thread.sleep(Duration.ofSeconds(1))
+                    endedTime = LocalDateTime.now()
+                }
+            }
+        var startedTime2: LocalDateTime? = null
+        var endedTime2: LocalDateTime? = null
+        val jobThread2 =
+            thread(start = true) {
+                getSyncService().sync(testSyncId) {
+                    startedTime2 = LocalDateTime.now()
+                    Thread.sleep(Duration.ofSeconds(1))
+                    endedTime2 = LocalDateTime.now()
+                }
+            }
+        // wait till end
+        jobThread.join()
+        jobThread2.join()
+        // we can't be sure about threads order, sort start and end time
+        val timePairs = listOf(startedTime!! to endedTime!!, startedTime2!! to endedTime2!!).sortedBy { it.first }
+        // check that there we ordered process
+        assert(timePairs[1].first > timePairs[0].second)
+        val delay = Duration.between(timePairs[0].second, timePairs[1].first)
+        logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
+    }
+
 }

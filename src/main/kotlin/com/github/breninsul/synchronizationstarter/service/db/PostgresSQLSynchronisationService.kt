@@ -44,13 +44,13 @@ open class PostgresSQLSynchronisationService(protected val dataSource: DataSourc
 
     override fun getAllLocksAfter(lifetime: Duration): List<Pair<Any, DBClientLock>> {
         val clearBefore = LocalDateTime.now().minus(lifetime)
-        return locks.filter { it.value.createdAt.isBefore(clearBefore) }.map { it.key to it.value }
+        return locks.filter { it.value.usedAt.isBefore(clearBefore) }.map { it.key to it.value }
     }
 
     override fun clear(id: Any) {
         internalLock.lock()
         try {
-            val clientLock = locks[id]
+            val clientLock = getLock(id)
             if (clientLock?.statement?.connection?.isClosed != false) {
                 locks.remove(id)
             }
@@ -63,12 +63,16 @@ open class PostgresSQLSynchronisationService(protected val dataSource: DataSourc
         id: Any,
         lifetime: Duration,
     ) {
-        val clientLock = locks[id]
-        if (clientLock?.createdAt?.isBefore(LocalDateTime.now().minus(lifetime)) == true) {
+        val clientLock = getLock(id)
+        if (clientLock?.usedAt?.isBefore(LocalDateTime.now().minus(lifetime)) == true) {
             unlock(clientLock)
         } else {
             logger.log(Level.FINEST, "Lock is not timed out!")
         }
+    }
+
+    override fun getLock(id: Any): DBClientLock? {
+        return locks[id]
     }
 
     override fun before(id: Any): Boolean {
@@ -93,7 +97,7 @@ open class PostgresSQLSynchronisationService(protected val dataSource: DataSourc
             if (tookMs > normalLockTime.toMillis()) {
                 logger.log(Level.SEVERE, "Lock took more then ${normalLockTime.toMillis()}ms $tookMs $id")
             }
-            getLock(id, statement)
+            getOrCreateLock(id, statement)
             return hadLock
         } catch (t: Throwable) {
             logger.log(Level.SEVERE, "Error using connection before sync", t)
@@ -103,7 +107,7 @@ open class PostgresSQLSynchronisationService(protected val dataSource: DataSourc
     }
 
     override fun after(id: Any) {
-        val clientLock = locks[id]
+        val clientLock = getLock(id)
         if (clientLock == null) {
             logger.log(Level.SEVERE, "No lock for  $id")
         } else {
@@ -115,8 +119,9 @@ open class PostgresSQLSynchronisationService(protected val dataSource: DataSourc
     /**
      * Unlocks a client lock.
      * @param l The client lock to unlock.
+     * @param timeout If unlock because of timeout
      */
-    protected open fun unlock(l: DBClientLock) {
+    protected open fun unlock(l: DBClientLock,timeout:Boolean=false) {
         internalLock.lock()
         try {
             val statement = l.statement
@@ -140,7 +145,7 @@ open class PostgresSQLSynchronisationService(protected val dataSource: DataSourc
      * @param id The id of the lock.
      * @param statement DB connection statement
      */
-    protected open fun getLock(
+    protected open fun getOrCreateLock(
         id: Any,
         statement: Statement,
     ): DBClientLock {

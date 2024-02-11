@@ -31,7 +31,7 @@ import java.time.LocalDateTime
  * This class represents a client lock for a database client. It extends the ClientLock class.
  *
  * @property statement The database statement associated with the lock.
- * @property createdAt The timestamp when the lock was created. Default value is the current time.
+ * @property usedAt The timestamp when the lock was created. Default value is the current time.
  *
  * @constructor Initializes a DBClientLock instance with the provided database statement and creation timestamp.
  *
@@ -72,7 +72,7 @@ class DBClientLock(
      * @return A string that contains the statement and the creation time of the lock.
      */
     override fun toString(): String {
-        return "DBClientLock(statement=$statement,createdAt=${createdAt})"
+        return "DBClientLock(statement=$statement,usedAt=${usedAt})"
     }
 
 }

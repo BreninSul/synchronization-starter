@@ -58,4 +58,6 @@ interface ClearableSynchronisationService<T : ClientLock> : SynchronizationServi
         id: Any,
         lifetime: Duration,
     )
+
+    fun getLock(id:Any):T?
 }

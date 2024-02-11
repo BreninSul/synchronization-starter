@@ -25,16 +25,18 @@
 package com.github.breninsul.synchronizationstarter.dto
 
 import java.time.LocalDateTime
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * This class represents a client lock.
  *
- * @property createdAt is the time when the client lock was created. Default value is the current time.
+ * @property usedAt is the time when the client lock was created. Default value is the current time.
  *
  * @constructor Initialize the client lock with the time of creation.
  *
  **/
-open class ClientLock(@Volatile var createdAt: LocalDateTime = LocalDateTime.now()) {
+open class ClientLock(@Volatile var usedAt: LocalDateTime = LocalDateTime.now(),) {
+    val isTimeout: AtomicBoolean = AtomicBoolean(false)
     /**
      * Check if this client lock is equal to another object.
      *
@@ -47,7 +49,7 @@ open class ClientLock(@Volatile var createdAt: LocalDateTime = LocalDateTime.now
 
         other as ClientLock
 
-        return createdAt == other.createdAt
+        return usedAt == other.usedAt
     }
 
     /**
@@ -56,7 +58,7 @@ open class ClientLock(@Volatile var createdAt: LocalDateTime = LocalDateTime.now
      * @return an int value which is the hashcode of this client lock.
      **/
     override fun hashCode(): Int {
-        return createdAt.hashCode()
+        return usedAt.hashCode()
     }
 
     /**
@@ -65,6 +67,6 @@ open class ClientLock(@Volatile var createdAt: LocalDateTime = LocalDateTime.now
      * @return a string representation of this client lock.
      **/
     override fun toString(): String {
-        return "ClientLock(createdAt=$createdAt)"
+        return "ClientLock(usedAt=$usedAt)"
     }
 }

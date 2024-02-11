@@ -25,6 +25,7 @@
 package com.github.breninsul.synchronizationstarter.service.clear
 
 import com.github.breninsul.synchronizationstarter.dto.ClientLock
+import com.github.breninsul.synchronizationstarter.exception.SyncTimeoutException
 import com.github.breninsul.synchronizationstarter.service.SynchronizationService
 import java.time.Duration
 import java.time.ZoneId
@@ -52,7 +53,11 @@ abstract class AbstractClearDecorator<T : ClientLock>(
     protected open val logger = Logger.getLogger(this.javaClass.name)
     protected open val batchTimer: Timer = createTimer()
     protected open val counter = AtomicLong(1)
-
+    init {
+        if (lockLifetime<(lockTimeout+clearDelay+ Duration.ofSeconds(1))){
+            throw IllegalArgumentException("Lock lifetime($lockLifetime) should be bigger then lockTimeout${lockTimeout}+clearDelay${clearDelay}+second.")
+        }
+    }
     /**
      * Method to filter current lock state.
      *
@@ -76,7 +81,7 @@ abstract class AbstractClearDecorator<T : ClientLock>(
                             .filter { filterLocked(it) }
                             .forEach { l ->
                                 delegate.unlockTimeOuted(l.first, lockTimeout)
-                                logger.log(Level.SEVERE, "Lock has been blocked before clear :${l.first}. Took ${System.currentTimeMillis() - l.second.createdAt.toEpochSecond(ZoneOffset.of(ZoneId.systemDefault().id))}")
+                                logger.log(Level.SEVERE, "Lock has been blocked before clear :${l.first}. Took ${System.currentTimeMillis() - l.second.usedAt.toEpochSecond(ZoneOffset.of(ZoneId.systemDefault().id))}")
                             }
                         val toClear = delegate.getAllLocksAfter(lifetime = lockLifetime)
                         val removed =
@@ -96,5 +101,19 @@ abstract class AbstractClearDecorator<T : ClientLock>(
         val timer = Timer("Clear-${delegate::class.simpleName}")
         timer.scheduleAtFixedRate(task, clearDelay.toMillis(), clearDelay.toMillis())
         return timer
+    }
+
+
+    override fun before(id: Any): Boolean {
+        val time = System.currentTimeMillis()
+        val wasLocked = delegate.before(id)
+        if (wasLocked) {
+            val took = System.currentTimeMillis() - time
+            logger.log(Level.SEVERE,"Time $took")
+            if (took > lockTimeout.toMillis()) {
+                throw SyncTimeoutException(id, lockTimeout.toMillis(), took)
+            }
+        }
+        return wasLocked
     }
 }
