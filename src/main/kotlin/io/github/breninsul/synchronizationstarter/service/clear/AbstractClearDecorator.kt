@@ -54,8 +54,10 @@ abstract class AbstractClearDecorator<T : ClientLock>(
     protected open val batchTimer: Timer = createTimer()
     protected open val counter = AtomicLong(1)
     init {
-        if (lockLifetime<(lockTimeout+clearDelay+ Duration.ofSeconds(1))){
-            throw IllegalArgumentException("Lock lifetime($lockLifetime) should be bigger then lockTimeout${lockTimeout}+clearDelay${clearDelay}+second.")
+        if (lockLifetime.toMillis()>0 && lockTimeout.toMillis()>0) {
+            if (lockLifetime < (lockTimeout + clearDelay + Duration.ofSeconds(1))) {
+                throw IllegalArgumentException("Lock lifetime($lockLifetime) should be bigger then lockTimeout${lockTimeout}+clearDelay${clearDelay}+second.")
+            }
         }
     }
     /**
@@ -76,21 +78,25 @@ abstract class AbstractClearDecorator<T : ClientLock>(
                 override fun run() {
                     val time = System.currentTimeMillis()
                     try {
-                        val toUnlock = delegate.getAllLocksAfter(lifetime = lockTimeout)
-                        toUnlock
-                            .filter { filterLocked(it) }
-                            .forEach { l ->
-                                delegate.unlockTimeOuted(l.first, lockTimeout)
-                                logger.log(Level.SEVERE, "Lock has been blocked before clear :${l.first}. Took ${System.currentTimeMillis() - l.second.usedAt.toEpochSecond(ZoneOffset.of(ZoneId.systemDefault().id))}")
+                        if (lockTimeout.toMillis()>0) {
+                            val toUnlock = delegate.getAllLocksAfter(lifetime = lockTimeout)
+                            toUnlock
+                                .filter { filterLocked(it) }
+                                .forEach { l ->
+                                    delegate.unlockTimeOuted(l.first, lockTimeout)
+                                    logger.log(Level.SEVERE, "Lock has been blocked before clear :${l.first}. Took ${System.currentTimeMillis() - l.second.usedAt.toEpochSecond(ZoneOffset.of(ZoneId.systemDefault().id))}")
+                                }
+                        }
+                        if (lockLifetime.toMillis()>0) {
+                            val toClear = delegate.getAllLocksAfter(lifetime = lockLifetime)
+                            val removed =
+                                toClear.map {
+                                    delegate.clear(it.first)
+                                    it.first
+                                }.joinToString(";")
+                            if (removed.isNotBlank()) {
+                                logger.log(Level.FINEST, "Lock for $removed removed ")
                             }
-                        val toClear = delegate.getAllLocksAfter(lifetime = lockLifetime)
-                        val removed =
-                            toClear.map {
-                                delegate.clear(it.first)
-                                it.first
-                            }.joinToString(";")
-                        if (removed.isNotBlank()) {
-                            logger.log(Level.FINEST, "Lock for $removed removed ")
                         }
                     } catch (t: Throwable) {
                         "Error clear locks ${t.javaClass}:${t.message}"

@@ -52,7 +52,7 @@ class SynchronisationAutoconfiguration {
     @ConditionalOnProperty(prefix = "synchronisation", name = ["mode"], matchIfMissing = true, havingValue = "LOCAL")
     fun getLocalSynchronizationService(synchronisationProperties: SynchronisationProperties): SynchronizationService {
         val local = LocalSynchronizationService(synchronisationProperties.normalLockTime)
-        if (synchronisationProperties.lockTimeout.toMillis() < 1) {
+        if (!haveToClear(synchronisationProperties)) {
             return local
         } else {
             val cleared = LocalClearDecorator(synchronisationProperties.lockTimeout, synchronisationProperties.lockLifetime, synchronisationProperties.clearDelay, local)
@@ -69,7 +69,7 @@ class SynchronisationAutoconfiguration {
         synchronisationProperties: SynchronisationProperties,
     ): SynchronizationService {
         val db = PostgresSQLSynchronisationService(dataSource, synchronisationProperties.normalLockTime)
-        if (synchronisationProperties.lockTimeout.toMillis() < 1) {
+        if (!haveToClear(synchronisationProperties)) {
             return db
         } else {
             val cleared = PostgresSQLClearDecorator(synchronisationProperties.lockTimeout, synchronisationProperties.lockLifetime, synchronisationProperties.clearDelay, db)
@@ -85,11 +85,14 @@ class SynchronisationAutoconfiguration {
         synchronisationProperties: SynchronisationProperties,
     ): SynchronizationService {
         val db = ZookeeperSynchronizationService(zooKeeper, synchronisationProperties.normalLockTime,synchronisationProperties.normalLockTime,synchronisationProperties.zooKeeperPathPrefix)
-        if (synchronisationProperties.lockTimeout.toMillis() < 1) {
+        if (!haveToClear(synchronisationProperties)) {
             return db
         } else {
             val cleared = ZookeeperClearDecorator(synchronisationProperties.lockTimeout, synchronisationProperties.lockLifetime, synchronisationProperties.clearDelay, db)
             return cleared
         }
     }
+
+    private fun haveToClear(synchronisationProperties: SynchronisationProperties) =
+        ! (synchronisationProperties.lockTimeout.toMillis() < 1 && synchronisationProperties.lockLifetime.toMillis() < 1)
 }
