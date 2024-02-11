@@ -24,6 +24,7 @@
 
 package io.github.breninsul.synchronizationstarter.zookeeper
 
+import io.github.breninsul.synchronizationstarter.SyncRunner
 import io.github.breninsul.synchronizationstarter.service.sync
 import io.github.breninsul.synchronizationstarter.service.zookeeper.ZookeeperSynchronizationService
 import org.apache.curator.test.TestingServer
@@ -70,34 +71,16 @@ class ZookeeperSynchronisationServiceTest {
     }
     @Test
     fun `test sync`() {
-        var startedTime: LocalDateTime? = null
-        var endedTime: LocalDateTime? = null
-        val testSyncId = "Test"
         val syncService = getSyncService()
+        val result1= SyncRunner.runSyncTask(syncService, Duration.ofSeconds(1), mutableListOf())
+        val result2= SyncRunner.runSyncTask(syncService, Duration.ofSeconds(1), mutableListOf())
+
         // Call two threads with the same task
-        val jobThread =
-            thread(start = true) {
-                syncService.sync(testSyncId) {
-                    startedTime = LocalDateTime.now()
-                    Thread.sleep(Duration.ofSeconds(1))
-                    endedTime = LocalDateTime.now()
-                }
-            }
-        var startedTime2: LocalDateTime? = null
-        var endedTime2: LocalDateTime? = null
-        val jobThread2 =
-            thread(start = true) {
-                syncService.sync(testSyncId) {
-                    startedTime2 = LocalDateTime.now()
-                    Thread.sleep(Duration.ofSeconds(1))
-                    endedTime2 = LocalDateTime.now()
-                }
-            }
         // wait till end
-        jobThread.join()
-        jobThread2.join()
+        result1.job!!.join()
+        result2.job!!.join()
         // we can't be sure about threads order, sort start and end time
-        val timePairs = listOf(startedTime!! to endedTime!!, startedTime2!! to endedTime2!!).sortedBy { it.first }
+        val timePairs = listOf(result1.toTimePair(), result2.toTimePair()).sortedBy { it.first }
         // check that there we ordered process
         assert(timePairs[1].first > timePairs[0].second)
         val delay = Duration.between(timePairs[0].second, timePairs[1].first)
@@ -111,33 +94,15 @@ class ZookeeperSynchronisationServiceTest {
     }
     @Test
     fun `test sync diff services`() {
-        var startedTime: LocalDateTime? = null
-        var endedTime: LocalDateTime? = null
-        val testSyncId = "Test"
         // Call two threads with the same task
-        val jobThread =
-            thread(start = true) {
-                getSyncService().sync(testSyncId) {
-                    startedTime = LocalDateTime.now()
-                    Thread.sleep(Duration.ofSeconds(1))
-                    endedTime = LocalDateTime.now()
-                }
-            }
-        var startedTime2: LocalDateTime? = null
-        var endedTime2: LocalDateTime? = null
-        val jobThread2 =
-            thread(start = true) {
-                getSyncService().sync(testSyncId) {
-                    startedTime2 = LocalDateTime.now()
-                    Thread.sleep(Duration.ofSeconds(1))
-                    endedTime2 = LocalDateTime.now()
-                }
-            }
+        val result1= SyncRunner.runSyncTask(getSyncService(), Duration.ofSeconds(1), mutableListOf())
+        val result2= SyncRunner.runSyncTask(getSyncService(), Duration.ofSeconds(1), mutableListOf())
+
         // wait till end
-        jobThread.join()
-        jobThread2.join()
+        result1.job!!.join()
+        result2.job!!.join()
         // we can't be sure about threads order, sort start and end time
-        val timePairs = listOf(startedTime!! to endedTime!!, startedTime2!! to endedTime2!!).sortedBy { it.first }
+        val timePairs = listOf(result1.toTimePair(), result2.toTimePair()).sortedBy { it.first }
         // check that there we ordered process
         assert(timePairs[1].first > timePairs[0].second)
         val delay = Duration.between(timePairs[0].second, timePairs[1].first)

@@ -25,13 +25,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 
-object Constraints {
-    const val SPRING_BOOT_VERSION = "3.2.2"
-    const val KOTLIN_VERSION = "1.9.22"
-    val githubPackagesUsername = System.getenv()["GIHUB_PACKAGE_USERNAME"]
-    val githubPackagesToken = System.getenv()["GIHUB_PACKAGE_TOKEN"]
-    val javaVersion = JavaVersion.VERSION_17
-}
+
 plugins {
     val kotlinVersion = "1.9.22"
     val springBootVersion = "3.2.2"
@@ -44,12 +38,21 @@ plugins {
     id("org.jetbrains.kotlin.plugin.spring") version kotlinVersion
     id("org.jetbrains.kotlin.kapt") version kotlinVersion
 }
+class Constraints {
+        val springBootVersion = "3.2.2"
+        val kotlinVersion = "1.9.22"
+        val githubPackagesUsername = System.getenv()["GIHUB_PACKAGE_USERNAME"]
+        val githubPackagesToken = System.getenv()["GIHUB_PACKAGE_TOKEN"]
+        val ossSonatypeUsername = project.properties["ossSonatypeUsername"].toString()
+        val ossSonatypePassword = project.properties["ossSonatypePassword"].toString()
+        val javaVersion = JavaVersion.VERSION_17
 
+}
 group = "io.github.breninsul"
 version = "1.0.0"
 
 java {
-    sourceCompatibility = Constraints.javaVersion
+    sourceCompatibility = Constraints().javaVersion
 }
 java {
     withJavadocJar()
@@ -66,9 +69,9 @@ tasks.compileKotlin {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter:${Constraints.SPRING_BOOT_VERSION}")
+    implementation("org.springframework.boot:spring-boot-starter:${Constraints().springBootVersion}")
     api("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.springframework.boot:spring-boot-starter-jdbc:${Constraints.SPRING_BOOT_VERSION}")
+    implementation("org.springframework.boot:spring-boot-starter-jdbc:${Constraints().springBootVersion}")
     implementation("org.postgresql:postgresql:42.7.1")
     implementation("org.apache.zookeeper:zookeeper:3.9.1")
     kapt("org.springframework.boot:spring-boot-autoconfigure-processor")
@@ -82,7 +85,7 @@ dependencies {
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
-        jvmTarget = Constraints.javaVersion.majorVersion
+        jvmTarget = Constraints().javaVersion.majorVersion
     }
 }
 
@@ -103,6 +106,24 @@ publishing {
                 name.set("BreninSul Spring Boot Synchronisation Starter")
                 url.set("https://github.com/BreninSul/synchronization-starter")
                 description.set("Starter for synchronisation services. Implementation for ")
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("http://opensource.org/licenses/MIT")
+                    }
+                }
+                scm {
+                    connection.set("scm:https://github.com/BreninSul/synchronization-starter.git")
+                    developerConnection.set("scm:git@github.com:BreninSul/synchronization-starter.git")
+                    url.set("https://github.com/BreninSul/synchronization-starter")
+                }
+                developers {
+                    developer {
+                        id.set("BreninSul")
+                        name.set("BreninSul")
+                        email.set("brenimnsul@gmail.com")
+                    }
+                }
             }
         }
     }
@@ -111,9 +132,21 @@ publishing {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/BreninSul/synchronization-starter")
             credentials {
-                username = Constraints.githubPackagesUsername
-                password = Constraints.githubPackagesToken
+                username = Constraints().githubPackagesUsername
+                password = Constraints().githubPackagesToken
             }
         }
+        maven {
+            val releasesUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            val snapshotsUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsUrl else releasesUrl
+            credentials {
+                username = Constraints().ossSonatypeUsername
+                password = Constraints().ossSonatypePassword
+            }
+        }
+    }
+    signing {
+        sign(publishing.publications["release"])
     }
 }

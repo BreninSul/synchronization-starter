@@ -24,6 +24,7 @@
 
 package io.github.breninsul.synchronizationstarter.zookeeper
 
+import io.github.breninsul.synchronizationstarter.SyncRunner
 import io.github.breninsul.synchronizationstarter.exception.SyncTimeoutException
 import io.github.breninsul.synchronizationstarter.service.local.LocalClearDecorator
 import io.github.breninsul.synchronizationstarter.service.local.LocalSynchronizationService
@@ -79,40 +80,13 @@ class ClearedZookeeperSynchronizationServiceTest {
         val time=System.currentTimeMillis()
         // Call two threads with the same task
         val exceptions= mutableListOf<SyncTimeoutException>()
-        val jobThread =
-            thread(start = true) {
-                try {
-                    clearedSyncService.sync(testSyncId) {
-                        Thread.sleep(Duration.ofSeconds(1))
-                    }
-                }catch (t:SyncTimeoutException){
-                    exceptions.add(t)
-                }
-            }
-        val jobThread2 =
-            thread(start = true) {
-                try {
-                    clearedSyncService.sync(testSyncId) {
-                        Thread.sleep(Duration.ofSeconds(1))
-                    }
-                }catch (t:SyncTimeoutException){
-                    exceptions.add(t)
-                }
-            }
-        val jobThread3 =
-            thread(start = true) {
-                try {
-                    clearedSyncService.sync(testSyncId) {
-                        Thread.sleep(Duration.ofSeconds(1))
-                    }
-                }catch (t:SyncTimeoutException){
-                    exceptions.add(t)
-                }
-            }
+        val result1= SyncRunner.runSyncTask(clearedSyncService, Duration.ofSeconds(1), exceptions)
+        val result2= SyncRunner.runSyncTask(clearedSyncService, Duration.ofSeconds(1),exceptions)
+        val result3= SyncRunner.runSyncTask(clearedSyncService, Duration.ofSeconds(1),exceptions)
         // wait till end
-        jobThread.join()
-        jobThread2.join()
-        jobThread3.join()
+        result1.job!!.join()
+        result2.job!!.join()
+        result3.job!!.join()
         val took=System.currentTimeMillis()-time
         // sure that one of treads ended with exceptions
         if (exceptions.size!=2){
@@ -134,33 +108,14 @@ class ClearedZookeeperSynchronizationServiceTest {
     @Test
     fun `test sync`() {
         val clearedSyncService = getClearSyncService(Duration.ofSeconds(100), Duration.ofSeconds(10))
-        var startedTime: LocalDateTime? = null
-        var endedTime: LocalDateTime? = null
-        val testSyncId = "Test"
         // Call two threads with the same task
-        val jobThread =
-            thread(start = true) {
-                clearedSyncService.sync(testSyncId) {
-                    startedTime = LocalDateTime.now()
-                    Thread.sleep(Duration.ofSeconds(1))
-                    endedTime = LocalDateTime.now()
-                }
-            }
-        var startedTime2: LocalDateTime? = null
-        var endedTime2: LocalDateTime? = null
-        val jobThread2 =
-            thread(start = true) {
-                clearedSyncService.sync(testSyncId) {
-                    startedTime2 = LocalDateTime.now()
-                    Thread.sleep(Duration.ofSeconds(1))
-                    endedTime2 = LocalDateTime.now()
-                }
-            }
+        val result1= SyncRunner.runSyncTask(clearedSyncService, Duration.ofSeconds(1), mutableListOf())
+        val result2= SyncRunner.runSyncTask(clearedSyncService, Duration.ofSeconds(1), mutableListOf())
         // wait till end
-        jobThread.join()
-        jobThread2.join()
+        result1.job!!.join()
+        result2.job!!.join()
         // we can't be sure about threads order, sort start and end time
-        val timePairs = listOf(startedTime!! to endedTime!!, startedTime2!! to endedTime2!!).sortedBy { it.first }
+        val timePairs = listOf(result1.toTimePair(), result2.toTimePair()).sortedBy { it.first }
         // check that there we ordered process
         assert(timePairs[1].first > timePairs[0].second)
         val delay = Duration.between(timePairs[0].second, timePairs[1].first)

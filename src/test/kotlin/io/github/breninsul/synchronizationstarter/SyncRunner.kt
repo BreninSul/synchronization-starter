@@ -22,35 +22,43 @@
  * SOFTWARE.
  */
 
-package io.github.breninsul.synchronizationstarter.local
+package io.github.breninsul.synchronizationstarter
 
-import io.github.breninsul.synchronizationstarter.SyncRunner
-import io.github.breninsul.synchronizationstarter.service.local.LocalSynchronizationService
+import io.github.breninsul.synchronizationstarter.exception.SyncTimeoutException
+import io.github.breninsul.synchronizationstarter.service.SynchronizationService
 import io.github.breninsul.synchronizationstarter.service.sync
-import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.LocalDateTime
-import java.util.logging.Level
-import java.util.logging.Logger
 import kotlin.concurrent.thread
 
-class LocalSynchronizationServiceTest {
-    protected val syncService = LocalSynchronizationService(Duration.ofMillis(100))
-    protected val logger = Logger.getLogger(this.javaClass.name)
+object SyncRunner {
+    data class Result(var job: Thread? = null, var startTime: LocalDateTime? = null, var endTime: LocalDateTime? = null, var exception: SyncTimeoutException? = null){
+        fun toTimePair():Pair<LocalDateTime,LocalDateTime>{
+            return startTime!! to endTime!!
+        }
+    }
 
-    @Test
-    fun `test sync`() {
-        // Call two threads with the same task
-        val result1= SyncRunner.runSyncTask(syncService, Duration.ofSeconds(1), mutableListOf())
-        val result2= SyncRunner.runSyncTask(syncService, Duration.ofSeconds(1), mutableListOf())
-        // wait till end
-        result1.job!!.join()
-        result2.job!!.join()
-        // we can't be sure about threads order, sort start and end time
-        val timePairs = listOf(result1.toTimePair(), result2.toTimePair()).sortedBy { it.first }
-        // check that there we ordered process
-        assert(timePairs[1].first > timePairs[0].second)
-        val delay = Duration.between(timePairs[0].second, timePairs[1].first)
-        logger.log(Level.INFO, "Delay was ${delay.toMillis()}")
+    fun runSyncTask(
+        service: SynchronizationService,
+        worktime: Duration,
+        exceptionList: MutableList<SyncTimeoutException>,
+        syncId: String = "Test"
+    ): Result {
+        val result = Result()
+        val job = thread(start = true) {
+            try {
+                service.sync(syncId) {
+                    result.startTime = LocalDateTime.now()
+                    Thread.sleep(worktime)
+                    result.endTime = LocalDateTime.now()
+                }
+            } catch (e: SyncTimeoutException) {
+                result.startTime = LocalDateTime.now()
+                exceptionList.add(e)
+                result.exception = e
+            }
+        }
+        result.job = job
+        return result
     }
 }
