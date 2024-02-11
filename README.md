@@ -1,5 +1,11 @@
 This project provides several synchronisation services to sync by any java/kotlin object (with equals/hashcode implementation).
 Synchronisation can be processed local,using PostgresSQL and Zookeeper.
+Implementation can be set by property synchronisation.mode
+````
+synchronisation.mode=LOCAL
+synchronisation.mode=POSTGRES
+synchronisation.mode=ZOOKEEPER
+````
 Beans in Spring Boot will be automatically registered in SynchronisationAutoconfiguration with defined properties SynchronisationProperties (prefix synchronisation).
 
 ````kotlin
@@ -19,7 +25,7 @@ repositories {
 ````kotlin
 dependencies {
 //Other dependencies
-    implementation("com.github.breninsul:synchronization-starter:1.0.0")
+    implementation("io.github.breninsul:synchronization-starter:1.0.0")
 //Other dependencies
 }
 

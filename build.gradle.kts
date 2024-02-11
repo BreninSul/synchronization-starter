@@ -24,21 +24,35 @@
 
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+
+
 plugins {
+    val kotlinVersion = "1.9.22"
+    val springBootVersion = "3.2.2"
     id("java-library")
     id("maven-publish")
-    id("org.springframework.boot") version "3.2.2"
+    id("signing")
+    id("org.springframework.boot") version springBootVersion
     id("io.spring.dependency-management") version "1.1.4"
-    id("org.jetbrains.kotlin.jvm") version "1.9.22"
-    id("org.jetbrains.kotlin.plugin.spring") version "1.9.22"
-    id("org.jetbrains.kotlin.kapt") version "1.9.22" apply(true)
+    id("org.jetbrains.kotlin.jvm") version kotlinVersion
+    id("org.jetbrains.kotlin.plugin.spring") version kotlinVersion
+    id("org.jetbrains.kotlin.kapt") version kotlinVersion
 }
+class Constraints {
+        val springBootVersion = "3.2.2"
+        val kotlinVersion = "1.9.22"
+        val githubPackagesUsername = System.getenv()["GIHUB_PACKAGE_USERNAME"]
+        val githubPackagesToken = System.getenv()["GIHUB_PACKAGE_TOKEN"]
+        val ossSonatypeUsername = project.properties["ossSonatypeUsername"].toString()
+        val ossSonatypePassword = project.properties["ossSonatypePassword"].toString()
+        val javaVersion = JavaVersion.VERSION_17
 
-group = "com.github.breninsul"
+}
+group = "io.github.breninsul"
 version = "1.0.0"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = Constraints().javaVersion
 }
 java {
     withJavadocJar()
@@ -47,25 +61,31 @@ java {
 repositories {
     mavenCentral()
 }
-tasks.compileJava{
+tasks.compileJava {
     dependsOn.add(tasks.processResources)
 }
-tasks.compileKotlin{
+tasks.compileKotlin {
     dependsOn.add(tasks.processResources)
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter")
+    implementation("org.springframework.boot:spring-boot-starter:${Constraints().springBootVersion}")
     api("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.springframework.boot:spring-boot-starter-jdbc:${Constraints().springBootVersion}")
+    implementation("org.postgresql:postgresql:42.7.1")
+    implementation("org.apache.zookeeper:zookeeper:3.9.1")
     kapt("org.springframework.boot:spring-boot-autoconfigure-processor")
     kapt("org.springframework.boot:spring-boot-configuration-processor")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.apache.curator:curator-test:5.6.0")
 }
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
-        jvmTarget = "17"
+        jvmTarget = Constraints().javaVersion.majorVersion
     }
 }
 
@@ -81,17 +101,52 @@ publishing {
             version = project.version.toString()
             val softwareComponent = components.first()
             from(softwareComponent)
+            pom {
+                packaging = "jar"
+                name.set("BreninSul Spring Boot Synchronisation Starter")
+                url.set("https://github.com/BreninSul/synchronization-starter")
+                description.set("Starter for synchronisation services. Implementation for ")
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("http://opensource.org/licenses/MIT")
+                    }
+                }
+                scm {
+                    connection.set("scm:https://github.com/BreninSul/synchronization-starter.git")
+                    developerConnection.set("scm:git@github.com:BreninSul/synchronization-starter.git")
+                    url.set("https://github.com/BreninSul/synchronization-starter")
+                }
+                developers {
+                    developer {
+                        id.set("BreninSul")
+                        name.set("BreninSul")
+                        email.set("brenimnsul@gmail.com")
+                    }
+                }
+            }
         }
-
     }
     repositories {
         maven {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/BreninSul/synchronization-starter")
             credentials {
-                username = "${System.getenv()["GIHUB_PACKAGE_USERNAME"]}"
-                password = "${System.getenv()["GIHUB_PACKAGE_TOKEN"]}"
+                username = Constraints().githubPackagesUsername
+                password = Constraints().githubPackagesToken
             }
         }
+        maven {
+            val releasesUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            val snapshotsUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsUrl else releasesUrl
+            credentials {
+                username = Constraints().ossSonatypeUsername
+                password = Constraints().ossSonatypePassword
+            }
+        }
+    }
+    signing {
+        sign(publishing.publications["release"])
     }
 }
