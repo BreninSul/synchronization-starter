@@ -42,7 +42,7 @@ val kotlinVersion = "1.9.22"
 val javaVersion = JavaVersion.VERSION_17
 
 group = "io.github.breninsul"
-version = "1.0.0.2"
+version = "1.0.0.4"
 
 java {
     sourceCompatibility = javaVersion
@@ -121,4 +121,7 @@ centralPortal {
     }
 }
 
-
+tasks.jar {
+    enabled = true
+    archiveClassifier.set("")
+}
