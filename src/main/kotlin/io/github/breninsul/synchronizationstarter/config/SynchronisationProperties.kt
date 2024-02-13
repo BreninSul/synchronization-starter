@@ -30,7 +30,7 @@ import java.time.Duration
 /**
  * Configuration properties related to Synchronisation.
  *
- * @property disabled A flag indicating whether Synchronisation is disabled.
+ * @property enabled A flag indicating whether Synchronisation is enabled.
  * @property lockTimeout The amount of time that Synchronisation locks can be held before they're timed out.
  * @property lockLifetime The lifespan of a Synchronisation lock.
  * @property clearDelay The delay between clearing of expired Synchronisation locks.
@@ -39,7 +39,7 @@ import java.time.Duration
  */
 @ConfigurationProperties("synchronisation")
 data class SynchronisationProperties(
-    var disabled: Boolean = false,
+    var enabled: Boolean = true,
     var lockTimeout: Duration = Duration.ofMinutes(10),
     var lockLifetime: Duration = Duration.ofMinutes(30),
     var clearDelay: Duration = Duration.ofMinutes(1),

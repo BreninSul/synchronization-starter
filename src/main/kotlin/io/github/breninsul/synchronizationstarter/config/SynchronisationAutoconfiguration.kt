@@ -43,7 +43,7 @@ import org.springframework.scheduling.annotation.Scheduled
 import javax.sql.DataSource
 
 @ConditionalOnClass(Scheduled::class)
-@ConditionalOnProperty(prefix = "synchronisation", name = ["disabled"], matchIfMissing = true, havingValue = "false")
+@ConditionalOnProperty(prefix = "synchronisation", name = ["enabled"], matchIfMissing = true, havingValue = "true")
 @AutoConfiguration
 @EnableConfigurationProperties(SynchronisationProperties::class)
 class SynchronisationAutoconfiguration {
@@ -63,7 +63,7 @@ class SynchronisationAutoconfiguration {
     @Bean
     @ConditionalOnBean(DataSource::class)
     @ConditionalOnMissingBean(SynchronizationService::class)
-    @ConditionalOnProperty(prefix = "synchronisation", name = ["mode"], matchIfMissing = true, havingValue = "POSTGRES")
+    @ConditionalOnProperty(prefix = "synchronisation", name = ["mode"], matchIfMissing = false, havingValue = "POSTGRES")
     fun getPostgresSQLSynchronisationService(
         dataSource: DataSource,
         synchronisationProperties: SynchronisationProperties,
@@ -79,7 +79,7 @@ class SynchronisationAutoconfiguration {
     @Bean
     @ConditionalOnBean(ZooKeeper::class)
     @ConditionalOnMissingBean(SynchronizationService::class)
-    @ConditionalOnProperty(prefix = "synchronisation", name = ["mode"], matchIfMissing = true, havingValue = "ZOOKEEPER")
+    @ConditionalOnProperty(prefix = "synchronisation", name = ["mode"], matchIfMissing = false, havingValue = "ZOOKEEPER")
     fun getZookeeperSynchronizationService(
         zooKeeper: ZooKeeper,
         synchronisationProperties: SynchronisationProperties,
