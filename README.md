@@ -10,13 +10,13 @@ For POSTGRES DataSource should be registered as spring bean
 For ZOOKEEPER ZooKeeper should be registered as spring bean
 Configure with properties
 
-| Parameter                          | Type     | Description                                                                                       |
-|------------------------------------|----------|---------------------------------------------------------------------------------------------------|
-| `synchronisation.disabled`         | boolean  | Disable autoconfig for this starter                                                              |
-| `synchronisation.lock-timeout`     | Duration | Max lifetime for lock. `io.github.breninsul.synchronizationstarter.exception.SyncTimeoutException` will be thrown otherwise |
-| `synchronisation.lock-lifetime`    | Duration | Lifetime of lock objects in map. For each synchronisation id, a lock object is created; this parameter specifies after what time interval it should be deleted. |
-| `synchronisation.normal-lock-time` | Duration | Provides normal lock time. If lock took more time, log message will be written                   |
-| `synchronisation.zoo-keeper-path-prefix` | String   | ZooKeeper path prefix                                                                            |
+| Parameter                                | Type     | Description                                                                                                                                                     |
+|------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `synchronisation.enabled`                | boolean  | Enable autoconfig for this starter                                                                                                                              |
+| `synchronisation.lock-timeout`           | Duration | Max lifetime for lock. `io.github.breninsul.synchronizationstarter.exception.SyncTimeoutException` will be thrown otherwise                                     |
+| `synchronisation.lock-lifetime`          | Duration | Lifetime of lock objects in map. For each synchronisation id, a lock object is created; this parameter specifies after what time interval it should be deleted. |
+| `synchronisation.normal-lock-time`       | Duration | Provides normal lock time. If lock took more time, log message will be written                                                                                  |
+| `synchronisation.zoo-keeper-path-prefix` | String   | ZooKeeper path prefix                                                                                                                                           |
 
 
 If set lock-timeout or lock-lifetime to disable timeout/lock clearing
