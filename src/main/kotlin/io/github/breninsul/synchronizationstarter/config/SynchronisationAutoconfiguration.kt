@@ -55,7 +55,7 @@ class SynchronisationAutoconfiguration {
         if (!haveToClear(synchronisationProperties)) {
             return local
         } else {
-            val cleared = LocalClearDecorator(synchronisationProperties.lockTimeout, synchronisationProperties.lockLifetime, synchronisationProperties.clearDelay, local)
+            val cleared = LocalClearDecorator(synchronisationProperties.lockLifetime, synchronisationProperties.lockTimeout, synchronisationProperties.clearDelay, local)
             return cleared
         }
     }
@@ -72,7 +72,7 @@ class SynchronisationAutoconfiguration {
         if (!haveToClear(synchronisationProperties)) {
             return db
         } else {
-            val cleared = PostgresSQLClearDecorator(synchronisationProperties.lockTimeout, synchronisationProperties.lockLifetime, synchronisationProperties.clearDelay, db)
+            val cleared = PostgresSQLClearDecorator(synchronisationProperties.lockLifetime, synchronisationProperties.lockTimeout, synchronisationProperties.clearDelay, db)
             return cleared
         }
     }
@@ -88,7 +88,7 @@ class SynchronisationAutoconfiguration {
         if (!haveToClear(synchronisationProperties)) {
             return db
         } else {
-            val cleared = ZookeeperClearDecorator(synchronisationProperties.lockTimeout, synchronisationProperties.lockLifetime, synchronisationProperties.clearDelay, db)
+            val cleared = ZookeeperClearDecorator(synchronisationProperties.lockLifetime, synchronisationProperties.lockTimeout, synchronisationProperties.clearDelay, db)
             return cleared
         }
     }

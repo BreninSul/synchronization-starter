@@ -25,7 +25,6 @@
 package io.github.breninsul.synchronizationstarter.service.local
 
 import io.github.breninsul.synchronizationstarter.dto.LocalClientLock
-import io.github.breninsul.synchronizationstarter.exception.SyncTimeoutException
 import io.github.breninsul.synchronizationstarter.service.clear.AbstractClearDecorator
 import java.time.Duration
 
