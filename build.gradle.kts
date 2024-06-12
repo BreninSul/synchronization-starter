@@ -75,10 +75,8 @@ dependencies {
 }
 
 
-tasks.named("compileKotlin", org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask::class.java) {
-    compilerOptions {
-
-    }
+kotlin {
+    jvmToolchain(javaVersion.majorVersion.toInt())
 }
 
 tasks.withType<Test> {
