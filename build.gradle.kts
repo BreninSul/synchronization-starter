@@ -22,14 +22,13 @@
  * SOFTWARE.
  */
 
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 
 plugins {
-    val kotlinVersion = "1.9.22"
-    val springBootVersion = "3.2.2"
+    val kotlinVersion = "2.0.0"
+    val springBootVersion = "3.3.0"
     id("java-library")
-    id("net.thebugmc.gradle.sonatype-central-portal-publisher") version "1.1.1"
+    id("net.thebugmc.gradle.sonatype-central-portal-publisher") version "1.2.3"
     id("org.springframework.boot") version springBootVersion
     id("io.spring.dependency-management") version "1.1.4"
     id("org.jetbrains.kotlin.jvm") version kotlinVersion
@@ -37,12 +36,12 @@ plugins {
     id("org.jetbrains.kotlin.kapt") version kotlinVersion
 }
 
-val springBootVersion = "3.2.2"
-val kotlinVersion = "1.9.22"
+val springBootVersion = "3.3.0"
+val kotlinVersion = "2.0.0"
 val javaVersion = JavaVersion.VERSION_17
 
 group = "io.github.breninsul"
-version = "1.0.1"
+version = "1.0.2"
 
 java {
     sourceCompatibility = javaVersion
@@ -75,10 +74,10 @@ dependencies {
     testImplementation("org.apache.curator:curator-test:5.6.0")
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs += "-Xjsr305=strict"
-        jvmTarget = javaVersion.majorVersion
+
+tasks.named("compileKotlin", org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask::class.java) {
+    compilerOptions {
+
     }
 }
 

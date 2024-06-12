@@ -115,7 +115,7 @@ abstract class AbstractClearDecorator<T : ClientLock>(
         val wasLocked = delegate.before(id)
         if (wasLocked) {
             val took = System.currentTimeMillis() - time
-            logger.log(Level.SEVERE,"Time $took")
+            logger.log(Level.FINEST,"Time $took")
             if (took > lockTimeout.toMillis()) {
                 throw SyncTimeoutException(id, lockTimeout.toMillis(), took)
             }
