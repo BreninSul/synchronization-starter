@@ -41,7 +41,7 @@ val kotlinVersion = "2.0.0"
 val javaVersion = JavaVersion.VERSION_17
 
 group = "io.github.breninsul"
-version = "1.0.2"
+version = "1.0.3"
 
 java {
     sourceCompatibility = javaVersion
@@ -65,7 +65,7 @@ dependencies {
     api("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.springframework.boot:spring-boot-starter-jdbc:${springBootVersion}")
     implementation("org.postgresql:postgresql:42.7.1")
-    implementation("org.apache.zookeeper:zookeeper:3.9.1")
+    implementation("org.apache.zookeeper:zookeeper:3.9.2")
     kapt("org.springframework.boot:spring-boot-autoconfigure-processor")
     kapt("org.springframework.boot:spring-boot-configuration-processor")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

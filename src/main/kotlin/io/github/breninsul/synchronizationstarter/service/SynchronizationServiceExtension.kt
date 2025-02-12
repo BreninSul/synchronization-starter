@@ -41,10 +41,47 @@ fun <T : SynchronizationService, R> T.sync(
     id: Any,
     task: Callable<R>,
 ): R {
+    return sync(id,true,task)
+}
+
+/**
+ * Executes a provided task with synchronization, ensuring thread-safe operations around the specified identifier.
+ * If `ignoreLockInTheSameThread` is true and the calling thread already holds the lock, the task is executed directly.
+ *
+ * @param T A type parameter that extends SynchronizationService
+ * @param R The result type of the provided task
+ * @param id An identifier used for synchronization
+ * @param ignoreLockInTheSameThread Indicates whether to skip synchronization if the calling thread is already locked, default is true
+ * @param task A callable task to be executed within the synchronization mechanics
+ * @return The result of the task execution
+ *
+ * @throws Exception if any exception is thrown by the callable task
+ */
+fun <T : SynchronizationService, R> T.sync(
+    id: Any,
+    ignoreLockInTheSameThread:Boolean =true,
+    task: Callable<R>,
+): R {
+    if (ignoreLockInTheSameThread&& threadIsAlreadyLocked.get()){
+        return task.call()
+    }
     before(id)
+    if (ignoreLockInTheSameThread){
+        threadIsAlreadyLocked.set(true)
+    }
     try {
         return task.call()
     } finally {
-        after(id)
+        try {
+            after(id)
+        }finally {
+            if (ignoreLockInTheSameThread) {
+                threadIsAlreadyLocked.set(false)
+            }
+        }
     }
 }
+private val threadIsAlreadyLocked = ThreadLocal.withInitial{false}
+
+
+

@@ -30,7 +30,7 @@ add the following dependency:
 ````kotlin
 dependencies {
 //Other dependencies
-    implementation("io.github.breninsul:synchronization-starter:${version}")
+    implementation("io.github.breninsul:synchronization-starter:1.0.3")
 //Other dependencies
 }
 
