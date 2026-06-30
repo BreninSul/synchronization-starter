@@ -34,7 +34,6 @@ import io.github.breninsul.synchronizationstarter.service.zookeeper.ZookeeperSyn
 import org.apache.curator.test.TestingServer
 import org.apache.zookeeper.Watcher
 import org.apache.zookeeper.ZooKeeper
-import org.junit.Assert
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

@@ -29,7 +29,6 @@ import io.github.breninsul.synchronizationstarter.exception.SyncTimeoutException
 import io.github.breninsul.synchronizationstarter.service.local.LocalClearDecorator
 import io.github.breninsul.synchronizationstarter.service.local.LocalSynchronizationService
 import io.github.breninsul.synchronizationstarter.service.sync
-import org.junit.Assert
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

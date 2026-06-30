@@ -25,23 +25,23 @@
 
 
 plugins {
-    val kotlinVersion = "2.0.0"
-    val springBootVersion = "3.3.0"
+    val kotlinVersion = "2.2.0"
+    val springBootVersion = "4.1.0"
     id("java-library")
-    id("net.thebugmc.gradle.sonatype-central-portal-publisher") version "1.2.3"
+    id("net.thebugmc.gradle.sonatype-central-portal-publisher") version "1.2.4"
     id("org.springframework.boot") version springBootVersion
-    id("io.spring.dependency-management") version "1.1.4"
+    id("io.spring.dependency-management") version "1.1.7"
     id("org.jetbrains.kotlin.jvm") version kotlinVersion
     id("org.jetbrains.kotlin.plugin.spring") version kotlinVersion
     id("org.jetbrains.kotlin.kapt") version kotlinVersion
 }
 
-val springBootVersion = "3.3.0"
-val kotlinVersion = "2.0.0"
-val javaVersion = JavaVersion.VERSION_17
+val springBootVersion = "4.1.0"
+val kotlinVersion = "2.2.0"
+val javaVersion = JavaVersion.VERSION_21
 
 group = "io.github.breninsul"
-version = "1.0.3"
+version = "2.0.0"
 
 java {
     sourceCompatibility = javaVersion
@@ -69,8 +69,7 @@ dependencies {
     kapt("org.springframework.boot:spring-boot-autoconfigure-processor")
     kapt("org.springframework.boot:spring-boot-configuration-processor")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.testcontainers:junit-jupiter")
-    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
     testImplementation("org.apache.curator:curator-test:5.6.0")
 }
 
@@ -85,7 +84,13 @@ tasks.withType<Test> {
 
 
 signing {
-    useGpgCmd()
+    val signingKey: String? = (findProperty("signingKey") as String?) ?: System.getenv("SIGNING_KEY")
+    val signingPassword: String? = (findProperty("signingPassword") as String?) ?: System.getenv("SIGNING_PASSWORD")
+    if (!signingKey.isNullOrBlank()) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    } else {
+        useGpgCmd()
+    }
 }
 
 
